@@ -1,9 +1,9 @@
 skip_tags: true
-image: Visual Studio 2019 Preview
+image: Visual Studio 2022
 
 install:
   - cmd: choco install gitversion.portable --version 5.0.1 -y
-  - cmd: choco install dotnetcore-sdk --version 3.1.201
+  # - cmd: choco install dotnetcore-sdk --version 3.1.201
 
 before_build:
   - ps: gitversion /l console /output buildserver

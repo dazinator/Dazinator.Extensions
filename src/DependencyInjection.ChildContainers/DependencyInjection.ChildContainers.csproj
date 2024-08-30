@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netstandard2.1;netstandard2.0;net50</TargetFrameworks>
+    <TargetFrameworks>netstandard2.1;netstandard2.0;net60</TargetFrameworks>
     <PackageId>Dazinator.Extensions.DependencyInjection.ChildContainers</PackageId>
   </PropertyGroup>
 
