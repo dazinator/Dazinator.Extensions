@@ -39,11 +39,11 @@ steps:
       installationPath: $(Agent.ToolsDirectory)/dotnet
 
   - task: UseDotNet@2
-      displayName: 'Use .NET Core sdk'
-      inputs:
-        packageType: sdk
-        useGlobalJson: true    
-        installationPath: $(Agent.ToolsDirectory)/dotnet
+    displayName: 'Use .NET Core sdk'
+    inputs:
+      packageType: sdk
+      useGlobalJson: true    
+      installationPath: $(Agent.ToolsDirectory)/dotnet
 
   # - script: dotnet tool install -g dotnet-format
   #   displayName: Install dotnet-format
