@@ -5,6 +5,7 @@
 
 | Package  | Stable | Pre-release |
 | ------------- | --- | --- |
+| Dazinator.Extensions.DependencyInjection.Modules  | [![Dazinator.Extensions.DependencyInjection.Modules](https://img.shields.io/nuget/v/Dazinator.Extensions.DependencyInjection.Modules.svg)](https://www.nuget.org/packages/Dazinator.Extensions.DependencyInjection.Modules/) | [![Dazinator.Extensions.DependencyInjection.Modules](https://img.shields.io/nuget/vpre/Dazinator.Extensions.DependencyInjection.Modules.svg)](https://www.nuget.org/packages/Dazinator.Extensions.DependencyInjection.Modules/) | 
 | Dazinator.Extensions.DependencyInjection.NamedServices  | [![Dazinator.Extensions.DependencyInjection.NamedServices](https://img.shields.io/nuget/v/Dazinator.Extensions.DependencyInjection.NamedServices.svg)](https://www.nuget.org/packages/Dazinator.Extensions.DependencyInjection.NamedServices/) | [![Dazinator.Extensions.DependencyInjection.NamedServices](https://img.shields.io/nuget/vpre/Dazinator.Extensions.DependencyInjection.NamedServices.svg)](https://www.nuget.org/packages/Dazinator.Extensions.DependencyInjection.NamedServices/) | 
 | Dazinator.Extensions.DependencyInjection.ChildContainers  | [![Dazinator.Extensions.DependencyInjection.ChildContainers](https://img.shields.io/nuget/v/Dazinator.Extensions.DependencyInjection.ChildContainers.svg)](https://www.nuget.org/packages/Dazinator.Extensions.DependencyInjection.ChildContainers/) | [![Dazinator.Extensions.DependencyInjection.ChildContainers](https://img.shields.io/nuget/vpre/Dazinator.Extensions.DependencyInjection.ChildContainers.svg)](https://www.nuget.org/packages/Dazinator.Extensions.DependencyInjection.ChildContainers/) | 
 | Dazinator.Extensions.DependencyInjection.Microsoft | [![Dazinator.Extensions.DependencyInjection.Microsoft](https://img.shields.io/nuget/v/Dazinator.Extensions.DependencyInjection.Microsoft.svg)](https://www.nuget.org/packages/Dazinator.Extensions.DependencyInjection.Microsoft/) | [![Dazinator.Extensions.DependencyInjection.Microsoft](https://img.shields.io/nuget/vpre/Dazinator.Extensions.DependencyInjection.Microsoft.svg)](https://www.nuget.org/packages/Dazinator.Extensions.DependencyInjection.Microsoft/) | 
@@ -21,8 +22,14 @@ It also provides a seperate (and optional) nuget package called `Dazinator.Exten
 ## Named Services
 
 Allows you to register services that can be resolved by name.
+Note: In dotnet 8, microsoft have now added a feature to allow you to resolve services by name. However if you are using dotnet 6 or below, you can use this package to achieve the same thing.
 
 For more detailed docs [see here](./src/DependencyInjection.NamedServices/README.md)
+
+## Modules
+
+Allows you to define modules that can be used to configure services in a modular way.
+For more detailed docs [see here](./src/DependencyInjection.Modules/README.md)
 
 ## Child Containers
 

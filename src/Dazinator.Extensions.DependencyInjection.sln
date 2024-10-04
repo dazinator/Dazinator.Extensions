@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.29806.167
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{12078179-A569-4A33-A6D6-9AB7E09EE8EA}"
 	ProjectSection(SolutionItems) = preProject
@@ -26,6 +26,8 @@ EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection", "DependencyInjection\DependencyInjection.csproj", "{70985784-29CA-465F-ABFC-2DF12EDEBC49}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection.ChildContainers", "DependencyInjection.ChildContainers\DependencyInjection.ChildContainers.csproj", "{E7485467-D842-42DE-B4F3-D1CF91D9E5DE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjection.Modules", "DependencyInjection.Modules\DependencyInjection.Modules.csproj", "{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -61,6 +63,10 @@ Global
 		{E7485467-D842-42DE-B4F3-D1CF91D9E5DE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E7485467-D842-42DE-B4F3-D1CF91D9E5DE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E7485467-D842-42DE-B4F3-D1CF91D9E5DE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

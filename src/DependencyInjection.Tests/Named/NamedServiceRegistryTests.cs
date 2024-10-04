@@ -4,8 +4,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.Named
     using System.Collections.Generic;
     using System.Linq;
     using Dazinator.Extensions.DependencyInjection;
-    using Microsoft.Extensions.DependencyInjection;
-    using NuGet.Frameworks;
+    using Microsoft.Extensions.DependencyInjection;  
     using Xunit;
     using ServiceCollection = ServiceCollection;
 
