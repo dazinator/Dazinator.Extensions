@@ -29,12 +29,21 @@ steps:
       # useConfigFile: true
     # configFilePath: GitVersion.yml
 
+  
   - task: UseDotNet@2
     displayName: 'Use .NET Core sdk'
     inputs:
       packageType: sdk
-      useGlobalJson: true
+      useGlobalJson: false # we need to be able builld targeting dotnet 6 too
+      version: '6.0.301'
       installationPath: $(Agent.ToolsDirectory)/dotnet
+
+  - task: UseDotNet@2
+      displayName: 'Use .NET Core sdk'
+      inputs:
+        packageType: sdk
+        useGlobalJson: true    
+        installationPath: $(Agent.ToolsDirectory)/dotnet
 
   # - script: dotnet tool install -g dotnet-format
   #   displayName: Install dotnet-format
