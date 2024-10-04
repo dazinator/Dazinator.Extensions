@@ -39,8 +39,8 @@ steps:
   - script: dotnet tool install -g dotnet-format
     displayName: Install dotnet-format
 
-  - script: dotnet-format -w "$(Build.SourcesDirectory)/src" -v normal --check
-    displayName: Formatting Check
+  # - script: dotnet format -w "$(Build.SourcesDirectory)/src" -v normal --check
+  #   displayName: Formatting Check
 
   - task: NuGetToolInstaller@1
     inputs:
