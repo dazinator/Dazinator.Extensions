@@ -51,9 +51,15 @@ public class ModuleRegistry : IModuleRegistry
     }
 
     private static TModule ActivateModule<TModule>(IServiceProvider serviceProvider)
-        //where TModule : IModule
+    //where TModule : IModule
     {
         return ActivatorUtilities.GetServiceOrCreateInstance<TModule>(serviceProvider);
+    }
+
+    private static IModule<TOptions> ActivateModule<TOptions>(IServiceProvider serviceProvider, Type moduleType)
+      where TOptions : class, new()
+    {
+        return ActivatorUtilities.GetServiceOrCreateInstance(serviceProvider, moduleType) as IModule<TOptions>;
     }
 
     private IServiceProvider GetRequiredInternalServiceProvider()
@@ -72,12 +78,6 @@ public class ModuleRegistry : IModuleRegistry
         return internalSp.GetRequiredService<IOptionsMonitor<TOptions>>();
     }
 
-    private ModuleOptionsBindingAttribute? GetModuleConfigurationAttribute(Type moduleType)
-    {
-        var attribute = moduleType.GetCustomAttribute<ModuleOptionsBindingAttribute>();
-        return attribute;
-    }
-
     private ServiceCollection EnsureInternalServices()
     {
         if (InternalServices == null)
@@ -86,44 +86,6 @@ public class ModuleRegistry : IModuleRegistry
         }
 
         return InternalServices;
-    }
-
-    /// <summary>
-    /// Register a class that can participate in configuration for a modules options, by implemening any of:
-    /// <see cref="IConfigureOptions{TOptions}"/>
-    /// <see cref="IPostConfigureOptions{TOptions}"/>
-    /// <see cref="IValidateOptions{TOptions}"/> 
-    /// </summary>
-    /// <typeparam name="TConfigureOptions"></typeparam>
-    public void ConfigureOptions<TConfigureOptions>()
-        where TConfigureOptions : class
-    {
-        var internalServices = EnsureInternalServices();
-        internalServices.ConfigureOptions<TConfigureOptions>();
-    }
-
-
-    private void AddOptions<TOptions>(string? optionsName, Action<TOptions>? configureOptions, string? fullConfigSectionKey)
-        where TOptions : class, new()
-    {
-        var internalServices = EnsureInternalServices();
-        if (string.IsNullOrWhiteSpace(optionsName))
-        {
-            optionsName = Options.DefaultName;
-        }
-        var optionsBuilder = internalServices.AddOptions<TOptions>(optionsName);
-        if (!string.IsNullOrWhiteSpace(fullConfigSectionKey))
-        {
-            optionsBuilder = optionsBuilder.BindConfiguration(fullConfigSectionKey);
-        }
-
-        // OptionsServices.Configure<TOptions>(Configuration.GetSection(fullConfigSectionKey));
-        if (configureOptions != null)
-        {
-            optionsBuilder = optionsBuilder.Configure(configureOptions);
-        }
-
-        optionsBuilder.ValidateDataAnnotations();
     }
 
     /// <summary>
@@ -139,32 +101,76 @@ public class ModuleRegistry : IModuleRegistry
     /// <returns></returns>
     public IModuleRegistry Register<TModule, TOptions>(Action<TOptions>? configureOptions = null, string? overrideConfigurationKey = null, string? moduleName = null)
         where TModule : IModule<TOptions>
+        where TOptions : class, new() => RegisterWithOptions<TModule, TOptions>((o) =>
+        {
+            if (configureOptions is not null)
+            {
+                o.Configure(configureOptions);
+            }
+        }, overrideConfigurationKey, moduleName);
+
+    /// <summary>
+    /// Register a module with the application. The module will be registered with the application and the options will be bound to the configuration.
+    /// </summary>
+    /// <param name="overrideConfigurationKey">Explicitly set the the modules configuration key used to bind its options, overriding any that the module supplies by default.</param>
+    /// <param name="configureOptions"></param>
+    /// <param name="moduleName">Optional name passed through to the module.
+    /// This will also configure a named options of the same name.
+    /// Useful so that multiple instances of the same module type, can each have individual options, which they can retreive using <see cref="IOptionsMonitor{TOptions}.Get"/></param>
+    /// <typeparam name="TModule"></typeparam>
+    /// <typeparam name="TOptions"></typeparam>
+    /// <returns></returns>
+    public IModuleRegistry RegisterWithOptions<TModule, TOptions>(Action<OptionsBuilder<TOptions>>? configureOptions = null, string? overrideConfigurationKey = null, string? moduleName = null)
+        where TModule : IModule<TOptions>
+        where TOptions : class, new() => RegisterWithOptions(typeof(TModule), (internalSp) => ActivateModule<TModule>(internalSp), configureOptions, overrideConfigurationKey, moduleName);
+
+    /// <summary>
+    /// Registers a module that requires <see cref="IOptionsMonitor{TOptions}"/> in order to participate in adding services to the application DI container.
+    /// </summary>
+    /// <param name="overrideConfigurationKey">Explicitly set the the modules configuration key used to bind its options, overriding any that the module supplies by default.</param>
+    /// <param name="configureOptions"></param>
+    /// <param name="moduleName">Optional name passed through to the module.
+    /// This will also configure a named options of the same name.
+    /// Useful so that multiple instances of the same module type, can each have individual options, which they can retreive using <see cref="IOptionsMonitor{TOptions}.Get"/></param>
+    /// <typeparam name="TModule"></typeparam>
+    /// <typeparam name="TOptions"></typeparam>
+    /// <returns></returns>
+    public IModuleRegistry RegisterWithOptions<TOptions>(Type moduleType,
+        Func<IServiceProvider, IModule<TOptions>> moduleInstanceFactory,
+        Action<OptionsBuilder<TOptions>>? configureOptions = null,
+        string? overrideConfigurationKey = null,
+        string? moduleName = null)
         where TOptions : class, new()
     {
-
-        var attribute = GetModuleConfigurationAttribute(typeof(TModule));
-        var configurationSectionKey = string.IsNullOrWhiteSpace(overrideConfigurationKey) ? attribute?.ConfigurationKey : overrideConfigurationKey;
-        var name = string.IsNullOrWhiteSpace(moduleName) ? attribute?.Name : moduleName;
-        var finalModuleName = name ?? string.Empty;
-        var fullConfigSectionKey = configurationSectionKey?.Replace("{OptionsName}", finalModuleName);
-
-        AddOptions(name, configureOptions, fullConfigSectionKey);
-        AddModuleInit((r, sp) =>
+        var optionsReg = new ModuleOptionsRegistry<TOptions>(moduleName);
+        optionsReg.UseModuleOptionsBindingAttributeConvention(moduleType, overrideConfigurationKey);
+        if (configureOptions != null)
         {
-            var moduleInstance = ActivateModule<TModule>(sp);
-            moduleInstance.Name = finalModuleName;
-            var optionsMonitor = GetOptionsMonitor<TOptions>(sp);
-            moduleInstance?.Register(r, optionsMonitor);           
+            optionsReg.UseOptionsBuilder(configureOptions);
+        }
+        optionsReg.Build(EnsureInternalServices());
+        var finalModuleName = optionsReg.Name;
+        AddModuleInit((nestedRegistry, internalSp) =>
+        {
+            var moduleInstance = moduleInstanceFactory(internalSp);
+            if (moduleInstance is null)
+            {
+                throw new ArgumentException("Module factory returned null.");
+            }
+            // ActivateModule<TOptions>(internalSp, moduleType);
+            moduleInstance.Name = finalModuleName ?? Options.DefaultName;
+            var optionsMonitor = GetOptionsMonitor<TOptions>(internalSp);
+            moduleInstance?.Register(nestedRegistry, optionsMonitor);
         });
-        return this;     
-      
+        return this;
     }
+
 
     /// <summary>
     /// Register a module with the application. The module will be registered with the application and the options will be bound to the configuration.
     /// </summary>
     /// <param name="moduleFactory"></param>
-    /// <param name="configureOptions"></param>
+    /// <param name="configureModuleOptions"></param>
     /// <param name="overrideConfigurationKey"></param>
     /// <param name="moduleName">Optional name passed through to the module.
     /// This will also configure a named options of the same name.
@@ -179,35 +185,19 @@ public class ModuleRegistry : IModuleRegistry
         string? moduleName = null)
         where TOptions : class, new()
     {
-        var module = moduleFactory();
-        if (module is null)
+        var moduleInstance = moduleFactory();
+        if (moduleInstance is null)
         {
             throw new ArgumentException("Module factory returned null.");
         }
-
-        var attribute = GetModuleConfigurationAttribute(module.GetType());
-        var configurationSectionKey = string.IsNullOrWhiteSpace(overrideConfigurationKey) ? attribute?.ConfigurationKey : overrideConfigurationKey;
-        var name = string.IsNullOrWhiteSpace(moduleName) ? attribute?.Name : moduleName;
-        module.Name = name ?? string.Empty;
-        // This allows a templated config section key to be used,
-        // for example: "MyModule:{OptionsName}"
-        // and then the OptionsName will be replaced with the actual options name before we bind it to the configuration.
-        var fullConfigSectionKey = configurationSectionKey?.Replace("{OptionsName}", module.Name);
-        // if (string.IsNullOrWhiteSpace(fullConfigSectionKey))
-        // {
-        // A module, with options, and without any configuration key - could be valid if its default Options is valid.
-        // We let options validation handle this.
-        //   throw new Exception("Module does not have a configuration key.");
-        //}
-
-        AddOptions(name, configureOptions, fullConfigSectionKey);
-        AddModuleInit((nestedRegistry, internalSp) =>
+        return RegisterWithOptions(moduleInstance.GetType(), (internalSp) => moduleInstance, (b) =>
         {
-            // this is invoked only after the OptionsServiceProvider has been created.
-            var optionsMonitor = GetOptionsMonitor<TOptions>(internalSp);
-            module?.Register(nestedRegistry, optionsMonitor);
-        });
-        return this;
+            if (configureOptions is not null)
+            {
+                b.Configure(configureOptions);
+            }
+        }, overrideConfigurationKey, moduleName);
+
     }
 
     private void AddModuleInit(Action<IModuleRegistry, IServiceProvider> registerModule)

@@ -55,14 +55,18 @@ public interface IModuleRegistry
     )
         where TOptions : class, new();
 
-
     /// <summary>
-    /// Register a class that can participate in the configuration of a modules options class, by implemening any of:
-    /// <see cref="IConfigureOptions{TOptions}"/>
-    /// <see cref="IPostConfigureOptions{TOptions}"/>
-    /// <see cref="IValidateOptions{TOptions}"/> 
+    /// Registers a module that requires <see cref="IOptionsMonitor{TOptions}"/> in order to participate in adding services to the application DI container.
     /// </summary>
-    /// <typeparam name="TConfigureOptions"></typeparam>
-    void ConfigureOptions<TConfigureOptions>()
-        where TConfigureOptions : class;   
+    /// <typeparam name="TModule"></typeparam>
+    /// <typeparam name="TOptions"></typeparam>
+    /// <param name="configureOptions"></param>
+    /// <param name="overrideConfigurationKey"></param>
+    /// <param name="moduleName"></param>
+    /// <returns></returns>
+    IModuleRegistry RegisterWithOptions<TModule, TOptions>(Action<OptionsBuilder<TOptions>>? configureOptions = null, string? overrideConfigurationKey = null, string? moduleName = null)
+         where TModule : IModule<TOptions>
+        where TOptions : class, new();
+
+
 }

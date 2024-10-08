@@ -140,7 +140,7 @@ This hook can also be useful if you want to return a different DI container (ISe
 
 #### ModuleOptionsBinding attribute
 
-This attribute is placed abovve modules that derive from `IModule<MyOptions>` and is used to specify:
+This attribute is placed above modules that derive from `IModule<MyOptions>` and is used to specify:
 - the configuration key to bind the options to.
 - the name of the options to bind to. This is useful when you have multiple instances of the same module, each with its own configuration.
 However these values are only "defaults". They can be overridden at registration time.
