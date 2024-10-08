@@ -88,6 +88,20 @@ public class ModuleRegistry : IModuleRegistry
         return InternalServices;
     }
 
+    /// <summary>
+    /// Register a class that can participate in configuration for a modules options, by implemening any of:
+    /// <see cref="IConfigureOptions{TOptions}"/>
+    /// <see cref="IPostConfigureOptions{TOptions}"/>
+    /// <see cref="IValidateOptions{TOptions}"/> 
+    /// </summary>
+    /// <typeparam name="TConfigureOptions"></typeparam>
+    public void ConfigureOptions<TConfigureOptions>()
+        where TConfigureOptions : class
+    {
+        var internalServices = EnsureInternalServices();
+        internalServices.ConfigureOptions<TConfigureOptions>();
+    }
+
 
     private void AddOptions<TOptions>(string? optionsName, Action<TOptions>? configureOptions, string? fullConfigSectionKey)
         where TOptions : class, new()

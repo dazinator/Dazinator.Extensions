@@ -54,4 +54,15 @@ public interface IModuleRegistry
         string? moduleName = null
     )
         where TOptions : class, new();
+
+
+    /// <summary>
+    /// Register a class that can participate in the configuration of a modules options class, by implemening any of:
+    /// <see cref="IConfigureOptions{TOptions}"/>
+    /// <see cref="IPostConfigureOptions{TOptions}"/>
+    /// <see cref="IValidateOptions{TOptions}"/> 
+    /// </summary>
+    /// <typeparam name="TConfigureOptions"></typeparam>
+    void ConfigureOptions<TConfigureOptions>()
+        where TConfigureOptions : class;   
 }
