@@ -503,7 +503,7 @@ public class ModuleRegistryTests
 
         public void Register(IModuleRegistry registry) => registry.Services.AddSingleton(this);
         public string Name { get; set; }
-    }
+    }  
 
     [Fact]
     public void Build_ModuleWithConstructorInjection_ReceivesDependencies()
@@ -518,12 +518,52 @@ public class ModuleRegistryTests
             // Include services that can be injected into modules.
             // These aren't registered with the application services unless a module registers once injected.
             s.AddSingleton<ITestService, TestService>();
-            return s.BuildServiceProvider();
+            s.AddSingleton<TestModuleWithDependency>();
+            var sp = s.BuildServiceProvider();
+
+            // Assert
+            var testModule = sp.GetRequiredService<TestModuleWithDependency>();
+            Assert.NotNull(testModule.TestService);
+            return sp;          
         });
 
         // Assert
         var serviceProvider = sut.Services.BuildServiceProvider();
         var testModule = serviceProvider.GetRequiredService<TestModuleWithDependency>();
         Assert.NotNull(testModule.TestService);
+    }
+
+    public class TestModuleWithOptionsAndDependency : IModule<TestOptions>
+    {
+        public ITestService TestService { get; }
+        public TestModuleWithOptionsAndDependency(ITestService testService) => TestService = testService;
+        public void Register(IModuleRegistry moduleRegistry, IOptionsMonitor<TestOptions> optionsMonitor) { }
+        public string Name { get; set; }
+    }
+
+    [Fact]
+    public void Build_ModuleWithOptionsAndConstructorInjection_ReceivesDependencies()
+    {
+        // Arrange
+        var sut = CreateTestSubject(null);
+
+       
+        // Act
+        sut.Register<TestModuleWithOptionsAndDependency, TestOptions>();
+        sut.Build(s =>
+        {
+            // Include services that can be injected into modules.
+            // These aren't registered with the application services unless a module registers once injected.
+            s.AddSingleton<ITestService, TestService>();
+            s.AddSingleton<TestModuleWithOptionsAndDependency>();
+            var sp = s.BuildServiceProvider();
+
+            // Assert
+            var testModule = sp.GetRequiredService<TestModuleWithOptionsAndDependency>();
+            Assert.NotNull(testModule.TestService);
+            return sp;
+        });     
+      
+       
     }
 }

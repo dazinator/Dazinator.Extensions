@@ -33,7 +33,7 @@ public interface IModuleRegistry
     /// <typeparam name="TOptions"></typeparam>
     /// <returns></returns>
     IModuleRegistry Register<TModule, TOptions>(Action<TOptions>? configureOptions = null, string? overrideRootConfigurationKey = null, string? moduleName = null)
-        where TModule : IModule<TOptions>, new()
+        where TModule : IModule<TOptions>
         where TOptions : class, new();
 
     /// <summary>

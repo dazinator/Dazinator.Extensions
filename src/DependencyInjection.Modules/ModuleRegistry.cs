@@ -50,7 +50,8 @@ public class ModuleRegistry : IModuleRegistry
         return this;
     }
 
-    private static TModule ActivateModule<TModule>(IServiceProvider serviceProvider) where TModule : IModule
+    private static TModule ActivateModule<TModule>(IServiceProvider serviceProvider)
+        //where TModule : IModule
     {
         return ActivatorUtilities.GetServiceOrCreateInstance<TModule>(serviceProvider);
     }
@@ -123,10 +124,26 @@ public class ModuleRegistry : IModuleRegistry
     /// <typeparam name="TOptions"></typeparam>
     /// <returns></returns>
     public IModuleRegistry Register<TModule, TOptions>(Action<TOptions>? configureOptions = null, string? overrideConfigurationKey = null, string? moduleName = null)
-        where TModule : IModule<TOptions>, new()
+        where TModule : IModule<TOptions>
         where TOptions : class, new()
     {
-        return Register(() => new TModule(), configureOptions, overrideConfigurationKey, moduleName);
+
+        var attribute = GetModuleConfigurationAttribute(typeof(TModule));
+        var configurationSectionKey = string.IsNullOrWhiteSpace(overrideConfigurationKey) ? attribute?.ConfigurationKey : overrideConfigurationKey;
+        var name = string.IsNullOrWhiteSpace(moduleName) ? attribute?.Name : moduleName;
+        var finalModuleName = name ?? string.Empty;
+        var fullConfigSectionKey = configurationSectionKey?.Replace("{OptionsName}", finalModuleName);
+
+        AddOptions(name, configureOptions, fullConfigSectionKey);
+        AddModuleInit((r, sp) =>
+        {
+            var moduleInstance = ActivateModule<TModule>(sp);
+            moduleInstance.Name = finalModuleName;
+            var optionsMonitor = GetOptionsMonitor<TOptions>(sp);
+            moduleInstance?.Register(r, optionsMonitor);           
+        });
+        return this;     
+      
     }
 
     /// <summary>
