@@ -3,6 +3,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
     using System;
     using System.ComponentModel;
     using System.IO;
+    using System.Runtime.CompilerServices;
     using System.Threading;
     using Dazinator.AspNet.Extensions.FileProviders;
     using Microsoft.Extensions.Configuration;
@@ -104,6 +105,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
         ///       - the previous values added at child level are still available to the child.
         /// </summary>
         /// <param name="args"></param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         private void AssertConfigCanBeUsedFromChildContainer(string[] args)
         {
             // Arrange
