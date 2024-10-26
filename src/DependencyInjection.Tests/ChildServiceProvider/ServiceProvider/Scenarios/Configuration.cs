@@ -159,13 +159,13 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
             var childReloadToken = childConfig.GetReloadToken();
 
             var waitHandle = new CountdownEvent(2);
-            parentReloadToken.RegisterChangeCallback((state) =>
+            using var registration1 = parentReloadToken.RegisterChangeCallback((state) =>
             {
                 waitHandle.Signal();
             }, null);
 
 
-            childReloadToken.RegisterChangeCallback((state) =>
+            using var registration2 = childReloadToken.RegisterChangeCallback((state) =>
             {
                 waitHandle.Signal();
             }, null);
