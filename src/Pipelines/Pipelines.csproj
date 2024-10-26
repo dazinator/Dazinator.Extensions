@@ -4,6 +4,7 @@
     <TargetFrameworks>net6.0;net8.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackageId>Dazinator.Extensions.Pipelines</PackageId>
     <PackageLicenseFile>LICENCE.md</PackageLicenseFile>
   </PropertyGroup>
 

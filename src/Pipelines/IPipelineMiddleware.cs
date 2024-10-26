@@ -1,4 +1,4 @@
-namespace Dazinator.Extensions.DependencyInjection.Pipelines;
+namespace Dazinator.Extensions.Pipelines;
 
 public interface IPipelineMiddleware
 {

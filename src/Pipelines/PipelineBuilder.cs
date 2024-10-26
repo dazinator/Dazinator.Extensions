@@ -1,4 +1,4 @@
-namespace Dazinator.Extensions.DependencyInjection.Pipelines;
+namespace Dazinator.Extensions.Pipelines;
 
 using System.Diagnostics;
 using System.Threading.Tasks;

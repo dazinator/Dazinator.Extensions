@@ -51,4 +51,4 @@ For docs, [see here](./src/DependencyInjection.ChildContainers/README.md)
 ## Pipelines
 
 Build composable, inspectable execution pipelines with dependency injection support.
-For more detailed docs [see here](./src/DependencyInjection.Pipelines/README.md)
+For more detailed docs [see here](./src/Pipelines/README.md)

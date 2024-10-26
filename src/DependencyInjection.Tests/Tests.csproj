@@ -45,11 +45,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Dazinator.Extensions.DependencyInjection.Pipelines\DependencyInjection.Pipelines.csproj" />
     <ProjectReference Include="..\DependencyInjection.ChildContainers\DependencyInjection.ChildContainers.csproj" />
     <ProjectReference Include="..\DependencyInjection.Modules\DependencyInjection.Modules.csproj" />
     <ProjectReference Include="..\DependencyInjection.NamedServices\DependencyInjection.NamedServices.csproj" />
     <ProjectReference Include="..\DependencyInjection.ReRouting\DependencyInjection.ReRouting.csproj" />
+    <ProjectReference Include="..\Pipelines\Pipelines.csproj" />
   </ItemGroup>
 
   <ItemGroup>

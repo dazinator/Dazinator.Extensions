@@ -1,5 +1,5 @@
 #pragma warning disable IDE0130 // Namespace does not match folder structure - for discoverability
-namespace Dazinator.Extensions.DependencyInjection.Pipelines;
+namespace Dazinator.Extensions.Pipelines;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
 
 using Microsoft.Extensions.DependencyInjection;

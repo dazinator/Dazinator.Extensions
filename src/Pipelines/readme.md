@@ -61,7 +61,7 @@ await pipeline.Run(cancellationToken); // Optional cancellation token
 
 ## Installation
 ```bash
-dotnet add package Dazinator.Extensions.DependencyInjection.Pipelines
+dotnet add package Dazinator.Extensions.Pipelines
 ```
 
 ## Middleware
