@@ -85,9 +85,9 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
             // One final collection
             GC.Collect(2, GCCollectionMode.Forced, true, true);
             GC.WaitForPendingFinalizers();
-
+            GC.Collect();
             Assert.False(ChildConfigWeakReference.IsAlive, "Child configuration was not garbage collected as expected");
-           
+
         }
 
         /// <summary>
@@ -111,91 +111,118 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
             testFileProvider.Directory.AddFile("/", new StringFileInfo("{ \"Level\": \"Parent\", \"InheritedFromParent\": true }", "appsettings.json"));
 
             var services = new ServiceCollection();
+            IConfiguration parentConfig = null;
+            IConfiguration childConfig = null;
+            IServiceProvider parentServiceProvider = null;
+            IServiceProvider childServiceProvider = null;
 
-            var configBuilder = new ConfigurationBuilder();
-            configBuilder.SetBasePath(Directory.GetCurrentDirectory())
-                         .SetFileProvider(testFileProvider)
-                         .AddCommandLine(args)
-                         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
-
-            IConfiguration config = configBuilder.Build();
-            services.AddSingleton(config);
-
-            var serviceProvider = services.BuildServiceProvider();
-            var childServiceProvider = services.CreateChildServiceProvider(serviceProvider, (childServices) =>
+            try
             {
-                // inherit but extend the IConfiguration for this child container.
-                // when the child container is disposed, our inhertied IConfiguration should be intact.
+                var configBuilder = new ConfigurationBuilder();
+                configBuilder.SetBasePath(Directory.GetCurrentDirectory())
+                             .SetFileProvider(testFileProvider)
+                             .AddCommandLine(args)
+                             .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
-                testFileProvider.Directory.AddFile("/", new StringFileInfo("{ \"Level\": \"Child\", \"ChildOnly\": true  }", "childsettings.json"));
+                IConfiguration config = configBuilder.Build();
+                services.AddSingleton(config);
 
-                var parentIConfig = serviceProvider.GetRequiredService<IConfiguration>();
-                IConfiguration childConfig = new ConfigurationBuilder()
-                                      .SetFileProvider(testFileProvider)
-                                      .AddConfiguration(parentIConfig)
-                                      .AddJsonFile("childsettings.json", optional: true, reloadOnChange: true)
-                                      .Build();
+                parentServiceProvider = services.BuildServiceProvider();
+                childServiceProvider = services.CreateChildServiceProvider(parentServiceProvider, (childServices) =>
+                {
+                    // inherit but extend the IConfiguration for this child container.
+                    // when the child container is disposed, our inhertied IConfiguration should be intact.
 
-                childServices.AddSingleton(childConfig);
+                    testFileProvider.Directory.AddFile("/", new StringFileInfo("{ \"Level\": \"Child\", \"ChildOnly\": true  }", "childsettings.json"));
 
-            }, s => s.BuildServiceProvider());
+                    var parentIConfig = parentServiceProvider.GetRequiredService<IConfiguration>();
+                    IConfiguration childConfig = new ConfigurationBuilder()
+                                          .SetFileProvider(testFileProvider)
+                                          .AddConfiguration(parentIConfig)
+                                          .AddJsonFile("childsettings.json", optional: true, reloadOnChange: true)
+                                          .Build();
 
+                    childServices.AddSingleton(childConfig);
 
-            var parentConfig = serviceProvider.GetRequiredService<IConfiguration>();
-            var childConfig = childServiceProvider.GetRequiredService<IConfiguration>();
-
-            Assert.Equal("Parent", parentConfig["Level"]);
-            Assert.Equal("Child", childConfig["Level"]);
-
-            Assert.Null(parentConfig["ChildOnly"]);
-            Assert.Equal("True", childConfig["ChildOnly"]);
-
-            Assert.NotNull(childConfig["InheritedFromParent"]);
-            Assert.Equal("True", childConfig["InheritedFromParent"]);
+                }, s => s.BuildServiceProvider());
 
 
-            // now change the parent and should be able to get the newly changed inherited values.
-            var parentReloadToken = parentConfig.GetReloadToken();
-            var childReloadToken = childConfig.GetReloadToken();
+                parentConfig = parentServiceProvider.GetRequiredService<IConfiguration>();
+                childConfig = childServiceProvider.GetRequiredService<IConfiguration>();
 
-            var waitHandle = new CountdownEvent(2);
-            using var registration1 = parentReloadToken.RegisterChangeCallback((state) =>
+                Assert.Equal("Parent", parentConfig["Level"]);
+                Assert.Equal("Child", childConfig["Level"]);
+
+                Assert.Null(parentConfig["ChildOnly"]);
+                Assert.Equal("True", childConfig["ChildOnly"]);
+
+                Assert.NotNull(childConfig["InheritedFromParent"]);
+                Assert.Equal("True", childConfig["InheritedFromParent"]);
+
+
+                // now change the parent and should be able to get the newly changed inherited values.
+                var parentReloadToken = parentConfig.GetReloadToken();
+                var childReloadToken = childConfig.GetReloadToken();
+
+                var waitHandle = new CountdownEvent(2);
+                using var registration1 = parentReloadToken.RegisterChangeCallback((state) =>
+                {
+                    waitHandle.Signal();
+                }, null);
+
+
+                using var registration2 = childReloadToken.RegisterChangeCallback((state) =>
+                {
+                    waitHandle.Signal();
+                }, null);
+
+
+                // change the parent config file, which should trigger the parent reload token (and the child?)
+                testFileProvider.Directory.AddOrUpdateFile("/", new StringFileInfo("{ \"Level\": \"Parent\", \"InheritedFromParent\": \"changed\" }", "appsettings.json"));
+                Assert.True(waitHandle.Wait(TimeSpan.FromSeconds(3)));
+
+                Assert.Equal("Parent", parentConfig["Level"]);
+                Assert.Equal("Child", childConfig["Level"]);
+
+                Assert.Null(parentConfig["ChildOnly"]);
+                Assert.Equal("True", childConfig["ChildOnly"]);
+
+                Assert.NotNull(childConfig["InheritedFromParent"]);
+                Assert.Equal("changed", childConfig["InheritedFromParent"]);
+
+                // verify when disposing child containers, parent config still works
+                if (childServiceProvider is IDisposable disposable)
+                {
+                    disposable.Dispose();
+                }
+
+
+                Assert.Equal("Parent", parentConfig["Level"]); // can still use.
+
+                // https://stackoverflow.com/questions/15460362/how-to-tell-if-an-object-has-been-garbage-collected
+                // read the comments.
+                ChildConfigWeakReference = new WeakReference(childConfig);
+            }
+            finally
             {
-                waitHandle.Signal();
-            }, null);
+                // Explicit cleanup
+                if (childServiceProvider is IDisposable disposable)
+                {
+                    disposable.Dispose();                   
+                }
+                childServiceProvider = null;
+                if (parentServiceProvider is IDisposable pdisposable)
+                {
+                    pdisposable.Dispose();                    
+                }
+                parentServiceProvider = null;
 
-
-            using var registration2 = childReloadToken.RegisterChangeCallback((state) =>
-            {
-                waitHandle.Signal();
-            }, null);
-
-
-            // change the parent config file, which should trigger the parent reload token (and the child?)
-            testFileProvider.Directory.AddOrUpdateFile("/", new StringFileInfo("{ \"Level\": \"Parent\", \"InheritedFromParent\": \"changed\" }", "appsettings.json"));
-            Assert.True(waitHandle.Wait(TimeSpan.FromSeconds(3)));
-
-            Assert.Equal("Parent", parentConfig["Level"]);
-            Assert.Equal("Child", childConfig["Level"]);
-
-            Assert.Null(parentConfig["ChildOnly"]);
-            Assert.Equal("True", childConfig["ChildOnly"]);
-
-            Assert.NotNull(childConfig["InheritedFromParent"]);
-            Assert.Equal("changed", childConfig["InheritedFromParent"]);
-
-            // verify when disposing child containers, parent config still works
-            if (childServiceProvider is IDisposable disposable)
-            {
-                disposable.Dispose();
+                // Clear references explicitly
+                parentConfig = null;
+                childConfig = null;
+                childServiceProvider = null;
             }
 
-
-            Assert.Equal("Parent", parentConfig["Level"]); // can still use.
-
-            // https://stackoverflow.com/questions/15460362/how-to-tell-if-an-object-has-been-garbage-collected
-            // read the comments.
-            ChildConfigWeakReference = new WeakReference(childConfig);
         }
 
 
