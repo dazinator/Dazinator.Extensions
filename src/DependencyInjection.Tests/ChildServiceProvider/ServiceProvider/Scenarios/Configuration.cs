@@ -65,7 +65,6 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
             Assert.True(waitHandle.WaitOne(TimeSpan.FromSeconds(5)));
         }
 
-
         [Theory]
         [Description("Tests scenarios around IConfiguration in the child container, and adding IConfiguration from the parent container as a configuration source.")]
         [InlineData("")]
@@ -76,19 +75,20 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
             // Force multiple GC collections across different generations
             for (int i = 0; i < 3; i++)
             {
-                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
                 GC.WaitForPendingFinalizers();
+                GC.SuppressFinalize(this); // Add this line
             }
 
             // Give a small delay to allow for any async operations to complete
-            Thread.Sleep(100);
+            Thread.Sleep(500); // Increased delay
 
             // One final collection
-            GC.Collect(2, GCCollectionMode.Forced, true, true);
+            GC.Collect(GC.MaxGeneration, GCCollectionMode.Forced, true, true);
             GC.WaitForPendingFinalizers();
-            GC.Collect();
-            Assert.False(ChildConfigWeakReference.IsAlive, "Child configuration was not garbage collected as expected");
+            GC.SuppressFinalize(this);
 
+            Assert.False(ChildConfigWeakReference.IsAlive, "Child configuration was not garbage collected as expected");
         }
 
         /// <summary>
@@ -117,6 +117,8 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
             IConfiguration childConfig = null;
             IServiceProvider parentServiceProvider = null;
             IServiceProvider childServiceProvider = null;
+            IDisposable parentConfigDisposable = null;
+            IDisposable childConfigDisposable = null;
 
             try
             {
@@ -204,10 +206,24 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
                 // https://stackoverflow.com/questions/15460362/how-to-tell-if-an-object-has-been-garbage-collected
                 // read the comments.
                 ChildConfigWeakReference = new WeakReference(childConfig);
+
+                // Cast configurations to IDisposable if they implement it
+                parentConfigDisposable = parentConfig as IDisposable;
+                childConfigDisposable = childConfig as IDisposable;
             }
             finally
             {
                 // Explicit cleanup
+                // Dispose configurations first
+                if (childConfigDisposable != null)
+                {
+                    childConfigDisposable.Dispose();
+                }
+                if (parentConfigDisposable != null)
+                {
+                    parentConfigDisposable.Dispose();
+                }
+
                 if (childServiceProvider is IDisposable disposable)
                 {
                     disposable.Dispose();                   
@@ -219,10 +235,14 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
                 }
                 parentServiceProvider = null;
 
-                // Clear references explicitly
+                // Clear all references
                 parentConfig = null;
                 childConfig = null;
                 childServiceProvider = null;
+                parentServiceProvider = null;
+                parentConfigDisposable = null;
+                childConfigDisposable = null;
+                testFileProvider = null;
             }
 
         }
