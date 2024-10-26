@@ -1,6 +1,6 @@
 # Pipeline Builder for .NET
 
-[![License: AGPL-3.0 with Commercial Option](https://img.shields.io/badge/License-AGPL%20with%20Commercial%20Option-blue.svg)](LICENSE)
+[![Licence: AGPL-3.0 with Commercial Option](https://img.shields.io/badge/License-AGPL%20with%20Commercial%20Option-blue.svg)](LICENSE)
 
 Build composable, inspectable execution pipelines with dependency injection support.
 
@@ -144,8 +144,3 @@ Key benefits:
 
 ## Contributing
 PRs welcome! Check out our [contribution guidelines](CONTRIBUTING.md).
-
-## License
-MIT
-
-Would you like me to add any additional sections or make any adjustments?
