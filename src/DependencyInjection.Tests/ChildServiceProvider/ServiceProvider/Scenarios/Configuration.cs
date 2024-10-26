@@ -72,10 +72,22 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
         {
             AssertConfigCanBeUsedFromChildContainer(args);
 
-            GC.Collect();
+            // Force multiple GC collections across different generations
+            for (int i = 0; i < 3; i++)
+            {
+                GC.Collect(2, GCCollectionMode.Forced, true, true);
+                GC.WaitForPendingFinalizers();
+            }
+
+            // Give a small delay to allow for any async operations to complete
+            Thread.Sleep(100);
+
+            // One final collection
+            GC.Collect(2, GCCollectionMode.Forced, true, true);
             GC.WaitForPendingFinalizers();
 
-            Assert.False(ChildConfigWeakReference.IsAlive);
+            Assert.False(ChildConfigWeakReference.IsAlive, "Child configuration was not garbage collected as expected");
+           
         }
 
         /// <summary>
