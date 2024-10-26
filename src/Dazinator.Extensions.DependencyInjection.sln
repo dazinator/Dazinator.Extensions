@@ -27,7 +27,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection", "Depe
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection.ChildContainers", "DependencyInjection.ChildContainers\DependencyInjection.ChildContainers.csproj", "{E7485467-D842-42DE-B4F3-D1CF91D9E5DE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjection.Modules", "DependencyInjection.Modules\DependencyInjection.Modules.csproj", "{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "DependencyInjection.Modules", "DependencyInjection.Modules\DependencyInjection.Modules.csproj", "{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DependencyInjection.Pipelines", "Dazinator.Extensions.DependencyInjection.Pipelines\DependencyInjection.Pipelines.csproj", "{F50475A7-B832-42D3-A641-332A08651B17}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -67,6 +69,10 @@ Global
 		{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E93CCB5E-9B68-46CD-BC2C-DE86E3D76241}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F50475A7-B832-42D3-A641-332A08651B17}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F50475A7-B832-42D3-A641-332A08651B17}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F50475A7-B832-42D3-A641-332A08651B17}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F50475A7-B832-42D3-A641-332A08651B17}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
