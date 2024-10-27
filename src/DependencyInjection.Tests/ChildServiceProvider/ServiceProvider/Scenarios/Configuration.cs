@@ -68,7 +68,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
 
         
         [Description("Tests scenarios around IConfiguration in the child container, and adding IConfiguration from the parent container as a configuration source.")]
-        [SkipOnCI(DisplayName = "Skipped on CI due to non-deterministic GC behavior")]
+        [Fact]
         public void Can_Extend_Parent_IConfiguration_In_ChildContainers()
         {
             AssertConfigCanBeUsedFromChildContainer();
