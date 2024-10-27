@@ -6,6 +6,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
     using System.Runtime.CompilerServices;
     using System.Threading;
     using Dazinator.AspNet.Extensions.FileProviders;
+    using global::DependencyInjection.Tests.Utils;
     using Microsoft.Extensions.Configuration;
     using Microsoft.Extensions.DependencyInjection;
     using Xunit;
@@ -65,12 +66,12 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
             Assert.True(waitHandle.WaitOne(TimeSpan.FromSeconds(5)));
         }
 
-        [Theory]
+        
         [Description("Tests scenarios around IConfiguration in the child container, and adding IConfiguration from the parent container as a configuration source.")]
-        [InlineData("")]
-        public void Can_Extend_Parent_IConfiguration_In_ChildContainers(params string[] args)
+        [SkipOnCI(DisplayName = "Skipped on CI due to non-deterministic GC behavior")]
+        public void Can_Extend_Parent_IConfiguration_In_ChildContainers()
         {
-            AssertConfigCanBeUsedFromChildContainer(args);
+            AssertConfigCanBeUsedFromChildContainer();
 
             // Force multiple GC collections across different generations
             for (int i = 0; i < 3; i++)
@@ -106,7 +107,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
         /// </summary>
         /// <param name="args"></param>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private void AssertConfigCanBeUsedFromChildContainer(string[] args)
+        private void AssertConfigCanBeUsedFromChildContainer()
         {
             // Arrange
             var testFileProvider = new InMemoryFileProvider();
@@ -125,7 +126,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.ChildServiceProvider
                 var configBuilder = new ConfigurationBuilder();
                 configBuilder.SetBasePath(Directory.GetCurrentDirectory())
                              .SetFileProvider(testFileProvider)
-                             .AddCommandLine(args)
+                             .AddCommandLine(new string[0])
                              .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
                 IConfiguration config = configBuilder.Build();

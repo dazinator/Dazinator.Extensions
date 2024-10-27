@@ -3,6 +3,7 @@ namespace DependencyInjection.Tests.Utils
     using System;
     using System.Collections.Concurrent;
     using Microsoft.Extensions.Logging;
+    using Xunit;
 
     public class BeginScopeContext
     {
