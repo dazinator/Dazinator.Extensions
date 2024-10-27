@@ -94,7 +94,7 @@ This library fills a specific gap between simple pipeline patterns and complex w
 
 | Solution | Focus | Strengths | Limitations | When To Use |
 |----------|-------|-----------|-------------|-------------|
-| **Pipeline Builder** | General purpose processing pipelines | • Rich branching & parallel execution<br>• Explicit scope control<br>• DI friendly<br>• Simple but powerful API<br>• Built-in inspection | • Single machine execution<br>• In-memory only | • Application startup orchestration<br>• Multi-tenant operations<br>• Complex initialization flows<br>• Batch processing with branches |
+| **Pipeline Builder (this)** | General purpose processing pipelines | • Rich branching & parallel execution<br>• Explicit scope control<br>• DI friendly<br>• Simple but powerful API<br>• Built-in inspection | • Single machine execution<br>• In-memory only | • Application startup orchestration<br>• Multi-tenant operations<br>• Complex initialization flows<br>• Batch processing with branches |
 | MediatR Pipeline | CQRS and commands | • Simple to use<br>• Well established<br>• Good for CQRS | • No branching<br>• No parallel execution<br>• Limited scope control | • Request/response pipelines<br>• Command validation<br>• Simple cross cutting concerns |
 | ASP.NET Middleware | Web request pipeline | • HTTP specific features<br>• Well documented<br>• Standard approach | • Fixed scope per request<br>• No branching<br>• Web focused | • HTTP request handling<br>• Web specific middleware |
 | TPL Dataflow | Data processing pipelines | • High performance<br>• Good for data flows<br>• Mature | • Complex setup<br>• Less DI friendly<br>• Steeper learning curve | • Data processing<br>• Producer/consumer scenarios<br>• Parallel data processing |
