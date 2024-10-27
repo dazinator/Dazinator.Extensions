@@ -37,4 +37,52 @@ public static class WhenExtensions
         return builder;
     }
 
+    public static PipelineBuilder TryWhen(
+    this PipelineBuilder builder,
+    Func<PipelineContext, bool> predicate,
+    Func<PipelineContext, Task> action,
+    Action<Exception>? onError = null)
+    {
+        builder.Add((sp, next) => async context =>
+        {
+            try
+            {
+                if (predicate(context))
+                {
+                    await action(context);
+                }
+            }
+            catch (Exception ex)
+            {
+                onError?.Invoke(ex);
+            }
+            await next(context);
+        });
+        return builder;
+    }
+
+    public static PipelineBuilder TryWhen(
+    this PipelineBuilder builder,
+    Func<PipelineContext, Task<bool>> predicate,
+    Func<PipelineContext, Task> action,
+    Action<Exception>? onError = null)
+    {
+        builder.Add((sp, next) => async context =>
+        {
+            try
+            {
+                if (await predicate(context))
+                {
+                    await action(context);
+                }
+            }
+            catch (Exception ex)
+            {
+                onError?.Invoke(ex);
+            }
+            await next(context);
+        });
+        return builder;
+    }
+
 }

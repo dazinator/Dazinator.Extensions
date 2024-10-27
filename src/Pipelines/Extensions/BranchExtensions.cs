@@ -41,6 +41,33 @@ public static class BranchExtensions
         //return builder;
     }
 
+    public static PipelineBuilder TryBranch(
+       this PipelineBuilder builder,
+       Func<PipelineContext, Task<bool>> condition,
+       Action<PipelineBuilder> configureBranch,
+       Action<Exception>? onError = null)
+    {
+        builder.Add((sp, next) => async context =>
+        {
+            try
+            {
+                if (await condition(context))
+                {
+                    var branchBuilder = new PipelineBuilder();
+                    configureBranch(branchBuilder);
+                    var branchPipeline = branchBuilder.Build(context.ServiceProvider);
+                    await branchPipeline.RunWithContext(context);
+                }
+            }
+            catch (Exception ex)
+            {
+                onError?.Invoke(ex);
+            }
+            await next(context);
+        });
+        return builder;
+    }
+
     public static PipelineBuilder UseParallelBranches<T>(this PipelineBuilder builder,
     IEnumerable<T> items,
     Action<PipelineBuilder, T> configureBranch)
