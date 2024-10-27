@@ -16,14 +16,10 @@ public static class StepConfigurationExtensions
 
         return builder.WrapLastComponent(originalComponent =>
         {
-            // Return a new component function
-            return (IServiceProvider sp, PipelineStep next) =>
+            return (sp, next) =>
             {
-                // Get the original pipeline step
                 var originalStep = originalComponent(sp, next);
-
-                // Return a new pipeline step that wraps the original
-                return async (PipelineContext context) =>
+                return async context =>
                 {
                     context.StepState.Set(options);
                     await originalStep(context);

@@ -66,6 +66,7 @@ public class PipelineBuilder
 
     public void Add(Func<PipelineStep, PipelineStep> item, string? stepId, [CallerMemberName] string? stepTypeName = null)
     {
+        var index = _components.Count;
         AddComponent((sp, next) =>
         {
             var getStep = item(next);
@@ -74,7 +75,7 @@ public class PipelineBuilder
                 GetStepId(stepId),
                 stepTypeName ?? "Unknown",
                 sp,
-                 _components.Count);
+                 index);
             return inspected;
         });
     }

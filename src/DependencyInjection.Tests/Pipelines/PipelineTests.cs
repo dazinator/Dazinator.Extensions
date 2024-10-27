@@ -1,6 +1,7 @@
 namespace DependencyInjection.Tests.Pipelines;
 
 using Dazinator.Extensions.Pipelines;
+using global::Tests.Pipelines;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Categories;
@@ -611,7 +612,7 @@ public class PipelineBuilderTests
                 {
                     var service = context.ServiceProvider.GetRequiredService<ITestService>();
                     serviceAccessCount++;
-                    return Task.FromResult(true);                  
+                    return Task.FromResult(true);
                 },
                 async context =>
                 {
@@ -886,6 +887,70 @@ public class PipelineBuilderTests
     }
 
     #endregion
+
+    #region Builder
+
+    [Fact]
+    public async Task StepIndicesAreAssignedInOrderOfAddition()
+    {
+        // Arrange
+        var stepIndices = new List<int>();
+        var inspector = new TestCallbackInspector(context =>
+        {
+            stepIndices.Add(context.PipelineContext.CurrentStepIndex);
+        });
+
+        var builder = new PipelineBuilder()
+         .AddInspector(inspector)
+         .Use(next => async ctx => await next(ctx), "Step1")
+         .Use(next => async ctx => await next(ctx), "Step2");
+
+        // Act
+        var pipeline = builder.Build(new ServiceCollection().BuildServiceProvider());
+        await pipeline.Run();
+
+        // Assert
+        Assert.Equal(new[] { 0, 1 }, stepIndices);
+    }
+
+    [Fact]
+    public async Task StepIndexStaysConstantWhenWrapped()
+    {
+        // Arrange
+        var stepIndices = new Dictionary<string, int>();
+        var inspector = new TestCallbackInspector(context =>
+        {
+            stepIndices[context.StepId] = context.PipelineContext.CurrentStepIndex;
+        });
+
+        var builder = new PipelineBuilder()
+            .AddInspector(inspector)
+            .Use(next => async ctx => await next(ctx), "Step1");
+
+        // Wrap the step multiple times
+        builder.WrapLastComponent(component => (sp, next) => async context =>
+        {
+            await component(sp, next)(context);
+        });
+
+        builder.WrapLastComponent(component => (sp, next) => async context =>
+        {
+            await component(sp, next)(context);
+        });
+
+        builder.Use(next => async ctx => await next(ctx), "Step2");
+
+        // Act
+        var pipeline = builder.Build(new ServiceCollection().BuildServiceProvider());
+        await pipeline.Run();
+
+        // Assert
+        Assert.Equal(0, stepIndices["Step1"]); // First step should always be index 0
+        Assert.Equal(1, stepIndices["Step2"]); // Second step should be index 1
+    }
+
+    #endregion
+
 
     // Support types for tests
     private interface IScopedService { }

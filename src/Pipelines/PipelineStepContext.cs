@@ -16,5 +16,6 @@ public class PipelineStepContext
     public TimeSpan Duration { get; set; }
     public Exception? Exception { get; set; }
     public PipelineContext PipelineContext { get; }
+   // public IStepStateAccessor StepState => PipelineContext.StepState;
     public bool ShouldSkip { get; set; }
 }
