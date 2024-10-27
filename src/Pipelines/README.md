@@ -7,6 +7,10 @@ Build composable, inspectable execution pipelines with dependency injection supp
 ## Table of Contents
 - [Why Use This?](#why-use-this)
 - [Quick Start](#quick-start)
+- [How Does This Compare To Other Solutions?](#how-does-this-compare-to-other-solutions)
+ - [Key Differentiators](#key-differentiators)
+ - [Perfect For](#perfect-for)
+ - [Not Designed For](#not-designed-for)
 - [Core Concepts](#core-concepts)
  - [Pipeline Context](#pipeline-context)
  - [Dependency Injection Scopes](#dependency-injection-scopes)
