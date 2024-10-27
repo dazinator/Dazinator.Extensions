@@ -31,7 +31,8 @@ Build composable, inspectable execution pipelines with dependency injection supp
 - Orchestrate complex business processes, or processing flows, including batch processing flows
 
 ## Quick Start
-Think of this as configuring a middleware pipeline like in ASP.NET Core, but for any processing scenario, with added support for branching and parallel execution.
+Think of this as building a middleware pipeline like in ASP.NET Core, but here we are building a general purpose processing pipeline not coupled to web requests.
+There is added support for things such as branching and parallel execution, and more features discussed below.
 
 ```csharp
 var builder = new PipelineBuilder()
@@ -69,7 +70,7 @@ var builder = new PipelineBuilder()
    );
 
 var pipeline = builder.Build(services);
-await pipeline.Run();
+await pipeline.Run(); // execute the pipeline!
 
 // Output:
 // Starting...
@@ -78,6 +79,45 @@ await pipeline.Run();
 // Initializing Tenant1
 // Initializing Tenant2
 ```
+
+Once you have built your pipeline, you can execute it as many times as you like.
+The pipeline is immutable and can be reused across multiple executions.
+Pipelines can be joined together, branched, and run in parallel.
+
+## How Does This Compare To Other Solutions?
+
+This library fills a specific gap between simple pipeline patterns and complex workflow engines:
+
+| Solution | Focus | Strengths | Limitations | When To Use |
+|----------|-------|-----------|-------------|-------------|
+| **Pipeline Builder** | General purpose processing pipelines | • Rich branching & parallel execution<br>• Explicit scope control<br>• DI friendly<br>• Simple but powerful API<br>• Built-in inspection | • Single machine execution<br>• In-memory only | • Application startup orchestration<br>• Multi-tenant operations<br>• Complex initialization flows<br>• Batch processing with branches |
+| MediatR Pipeline | CQRS and commands | • Simple to use<br>• Well established<br>• Good for CQRS | • No branching<br>• No parallel execution<br>• Limited scope control | • Request/response pipelines<br>• Command validation<br>• Simple cross cutting concerns |
+| ASP.NET Middleware | Web request pipeline | • HTTP specific features<br>• Well documented<br>• Standard approach | • Fixed scope per request<br>• No branching<br>• Web focused | • HTTP request handling<br>• Web specific middleware |
+| TPL Dataflow | Data processing pipelines | • High performance<br>• Good for data flows<br>• Mature | • Complex setup<br>• Less DI friendly<br>• Steeper learning curve | • Data processing<br>• Producer/consumer scenarios<br>• Parallel data processing |
+
+### Key Differentiators
+
+- **Explicit Scope Control**: Unlike ASP.NET Core middleware, you control exactly when and where new DI scopes are created, making it perfect for complex initialization flows and multi-tenant scenarios.
+
+- **Rich Branching**: Both conditional and parallel execution paths with proper scope isolation - something not commonly found in other pipeline implementations.
+
+- **Error Handling Models**: Provides both strict (`Use`, `When`, `Branch`) and tolerant (`TryRun`, `TryWhen`, `TryBranch`) error handling approaches, letting you control exactly how failures affect the pipeline.
+
+- **Inspection System**: Built-in support for monitoring execution, timing, and errors across all pipeline operations including branches.
+
+### Perfect For
+
+✅ Application startup orchestration that requires careful ordering and conditional execution  
+✅ Multi-tenant scenarios where operations need to run in parallel with proper isolation  
+✅ Complex initialization flows with branching logic and dependency injection  
+✅ Batch processing where some steps can run in parallel and others must be sequential  
+
+### Not Designed For
+
+❌ Distributed workflow processing across multiple machines  
+❌ Long-running persistent workflows  
+❌ Event-driven architectures (though could be used within event handlers)  
+❌ Web request processing (use ASP.NET middleware instead)
 
 ## Core Concepts
 
