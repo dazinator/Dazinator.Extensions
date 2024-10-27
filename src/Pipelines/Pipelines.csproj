@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <PackageId>Dazinator.Extensions.Pipelines</PackageId>
     <PackageLicenseFile>LICENCE.md</PackageLicenseFile>
+    <RootNamespace>Dazinator.Extensions.Pipelines</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>

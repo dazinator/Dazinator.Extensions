@@ -1,7 +1,7 @@
+
 #pragma warning disable IDE0130 // Namespace does not match folder structure - for discoverability
 namespace Dazinator.Extensions.Pipelines;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
-
 using Microsoft.Extensions.DependencyInjection;
 
 public static class UseMiddlewareExtensions
@@ -26,11 +26,11 @@ public static class UseMiddlewareExtensions
 
         return builder;
     }
-   
+
 
 #if NET8_0
     // New method that supports keyed middleware
-    public static PipelineBuilder UseMiddleware<TMiddleware>(this PipelineBuilder builder, string key, string stepId = null)
+    public static PipelineBuilder UseMiddleware<TMiddleware>(this PipelineBuilder builder, string key, string? stepId = null)
         where TMiddleware : IPipelineMiddleware
     {
         builder.Add(next => async context =>

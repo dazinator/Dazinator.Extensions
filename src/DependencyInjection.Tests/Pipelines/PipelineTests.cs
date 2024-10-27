@@ -365,6 +365,66 @@ public class PipelineBuilderTests
         Assert.Equal(expectedException, inspector.Exceptions[0]);
     }
 
+    [Fact]
+    public async Task InspectorTracksBranchSteps()
+    {
+        // Arrange
+        var allEvents = new List<string>();
+        var services = new ServiceCollection()
+            .BuildServiceProvider();
+
+        var inspector = new TestInspectorEvents();
+        inspector.BeforeStep += (ctx) => allEvents.Add($"Inspector Before {ctx.StepId}");
+        inspector.AfterStep += (ctx) => allEvents.Add($"Inspector After {ctx.StepId}");
+
+        // Act
+        var builder = new PipelineBuilder()
+            .AddInspector(inspector)
+            .Use(next => async ct =>
+            {
+                allEvents.Add("Main Pipeline Start");
+                await next(ct);
+                allEvents.Add("Main Pipeline End");
+            }, "MainStep")
+            .UseBranch(
+                ctx => Task.FromResult(true), // Always execute branch
+                branch => branch
+                    .Use(next => async ct =>
+                    {
+                        allEvents.Add("Branch Step1");
+                        await next(ct);
+                    }, "BranchStep1")
+                    .Use(next => async ct =>
+                    {
+                        allEvents.Add("Branch Step2");
+                        await next(ct);
+                    }, "BranchStep2"),
+                "BranchOperation"
+            );
+
+        var pipeline = builder.Build(services);
+        await pipeline.Run(default);
+
+        // Assert
+        var expected = new[]
+        {
+        "Inspector Before MainStep",
+        "Main Pipeline Start",
+        "Inspector Before BranchOperation",
+        "Inspector Before BranchStep1",
+        "Branch Step1",
+        "Inspector Before BranchStep2",
+        "Branch Step2",
+        "Inspector After BranchStep2",
+        "Inspector After BranchStep1",
+        "Inspector After BranchOperation",
+        "Main Pipeline End",
+        "Inspector After MainStep"
+    };
+
+        Assert.Equal(expected, allEvents);
+    }
+
     #endregion
 
     #region When
@@ -386,7 +446,7 @@ public class PipelineBuilderTests
                 executionOrder.Add("After When");
             })
             .When(
-                context => Task.FromResult(false),
+                context => false,
                 context =>
                 {
                     executionOrder.Add("When Action"); // Should not execute;
@@ -427,7 +487,7 @@ public class PipelineBuilderTests
                 executionOrder.Add("After When");
             })
             .When(
-                context => Task.FromResult(true),
+                context => true,
                 context => { executionOrder.Add("When Action"); return Task.CompletedTask; }
             )
             .Use(next => async context =>
@@ -466,7 +526,7 @@ public class PipelineBuilderTests
                 executionOrder.Add("Main Pipeline End");
             })
             .When(
-                context => Task.FromResult(true),
+                context => true,
                 async context =>
                 {
                     var nestedPipeline = new PipelineBuilder()
@@ -478,7 +538,7 @@ public class PipelineBuilderTests
                         })
                         .Build(context.ServiceProvider);
 
-                    await nestedPipeline.RunWithContext(context);
+                    await nestedPipeline.BranchFrom(context);
                 }
             )
             .Use(next => async context =>
@@ -564,7 +624,7 @@ public class PipelineBuilderTests
                         })
                         .Build(context.ServiceProvider);
 
-                    await nestedPipeline.RunWithContext(context);
+                    await nestedPipeline.BranchFrom(context);
                 }
             );
 

@@ -1,11 +1,10 @@
 #pragma warning disable IDE0130 // Namespace does not match folder structure - for discoverability
 namespace Dazinator.Extensions.Pipelines;
 #pragma warning restore IDE0130 // Namespace does not match folder structure
-
 public static class RunExtensions
 {
 
-    public static PipelineBuilder Run(this PipelineBuilder builder, Action action, string stepId = null)
+    public static PipelineBuilder Run(this PipelineBuilder builder, Action action, string? stepId = null)
     {
         builder.Add(next => async context =>
         {
@@ -80,7 +79,7 @@ public static class RunExtensions
             }
             await next(context);
         }, stepId, nameof(TryRun));
-        return builder;      
+        return builder;
     }
 
     public static PipelineBuilder TryRunAsync(this PipelineBuilder builder, Func<PipelineContext, Task> action, Action<Exception>? onError = null, string? stepId = null)

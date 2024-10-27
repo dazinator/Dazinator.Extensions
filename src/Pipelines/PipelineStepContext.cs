@@ -15,5 +15,6 @@ public class PipelineStepContext
     public IServiceProvider ServiceProvider { get; }
     public TimeSpan Duration { get; set; }
     public Exception? Exception { get; set; }
-    public PipelineContext PipelineContext { get; }   
+    public PipelineContext PipelineContext { get; }
+    public bool ShouldSkip { get; set; }
 }

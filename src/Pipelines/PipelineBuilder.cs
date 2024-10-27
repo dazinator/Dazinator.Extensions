@@ -1,6 +1,7 @@
 namespace Dazinator.Extensions.Pipelines;
 
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 
 public class PipelineBuilder
@@ -14,10 +15,17 @@ public class PipelineBuilder
         return this;
     }
 
-    private PipelineStep CreateInspectedStep(PipelineStep step, string stepId, string stepType, IServiceProvider sp)
+    private void AddComponent(Func<IServiceProvider, PipelineStep, PipelineStep> item)
     {
+        _components.Add(item);
+    }
+
+    private PipelineStep CreateInspectedStep(PipelineStep step, string stepId, string stepType, IServiceProvider sp, int stepIndex)
+    {       
+#pragma warning disable IDE0022 // Use expression body for method
         return async context =>
         {
+            context.CurrentStepIndex = stepIndex;
             var stepContext = new PipelineStepContext(stepId, stepType, sp, context);
             var sw = Stopwatch.StartNew();
 
@@ -50,25 +58,23 @@ public class PipelineBuilder
                 }
             }
         };
+#pragma warning restore IDE0022 // Use expression body for method
     }
-
-    public void Add(Func<IServiceProvider, PipelineStep, PipelineStep> item)
-    {
-        _components.Add(item);
-    }
+       
 
     private static string GetStepId(string? stepId) => stepId ?? "Anonymous";
 
-    public void Add(Func<PipelineStep, PipelineStep> item, string? stepId, string stepTypeName)
+    public void Add(Func<PipelineStep, PipelineStep> item, string? stepId, [CallerMemberName] string? stepTypeName = null)
     {
-        _components.Add((sp, next) =>
+        AddComponent((sp, next) =>
         {
             var getStep = item(next);
             var inspected = CreateInspectedStep(
                 getStep,
                 GetStepId(stepId),
-                stepTypeName,
-                sp);
+                stepTypeName ?? "Unknown",
+                sp,
+                 _components.Count);
             return inspected;
         });
     }
@@ -99,7 +105,34 @@ public class PipelineBuilder
         return new Pipeline(pipeline, rootProvider);
     }
 
-   // public PipelineStep Build(IServiceProvider rootProvider) => Build(rootProvider, _ => Task.CompletedTask);
+    public PipelineBuilder WrapLastComponent(
+       Func<Func<IServiceProvider, PipelineStep, PipelineStep>,
+           Func<IServiceProvider, PipelineStep, PipelineStep>> wrapper)
+    {
+        if (_components.Count == 0)
+        {
+            throw new InvalidOperationException("No component to wrap");
+        }
+
+        _components[^1] = wrapper(_components[^1]);
+        return this;
+    }
+
+
+    internal PipelineBuilder CreateBranch()
+    {
+        var branchBuilder = new PipelineBuilder();
+        // Transfer inspectors
+        foreach (var inspector in _inspectors)
+        {
+            branchBuilder.AddInspector(inspector);
+        }
+        
+        return branchBuilder;
+    }  
+
+   
+    // public PipelineStep Build(IServiceProvider rootProvider) => Build(rootProvider, _ => Task.CompletedTask);
 
     //private PipelineStep Build(IServiceProvider provider, PipelineStep final)
     //{
@@ -119,46 +152,5 @@ public class PipelineBuilder
 
 }
 
-public class Pipeline
-{
-    private readonly PipelineStep _pipeline;
-    private readonly IServiceProvider _serviceProvider;
-
-    internal Pipeline(PipelineStep pipeline, IServiceProvider serviceProvider)
-    {
-        _pipeline = pipeline;
-        _serviceProvider = serviceProvider;
-    }
-
-    public Task Run(CancellationToken cancellationToken = default)
-    {
-        var context = new PipelineContext(_serviceProvider, cancellationToken);
-        return _pipeline(context);
-    }
-
-    /// <summary>
-    /// Run the pipeline with an existing context, making pipelines "composable".
-    /// </summary>
-    /// <param name="context"></param>
-    /// <returns></returns>
-    public Task RunWithContext(PipelineContext context)
-    {
-        return _pipeline(context);
-    }
-}
-
 
 public delegate Task PipelineStep(PipelineContext context);
-
-
-public class PipelineContext
-{
-    public PipelineContext(IServiceProvider serviceProvider, CancellationToken cancellationToken)
-    {
-        ServiceProvider = serviceProvider;
-        CancellationToken = cancellationToken;
-    }
-
-    public IServiceProvider ServiceProvider { get; set; }
-    public CancellationToken CancellationToken { get; set; }
-}

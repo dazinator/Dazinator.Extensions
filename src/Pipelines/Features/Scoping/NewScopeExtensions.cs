@@ -28,6 +28,6 @@ public static class NewScopeExtensions
                 context.ServiceProvider = original;
             }
         }, stepId, nameof(UseNewScope));
-        return builder; 
+        return builder;
     }
 }
