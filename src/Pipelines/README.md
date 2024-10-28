@@ -108,12 +108,15 @@ Once you have built your pipeline, you can execute it as many times as you like.
 The pipeline is immutable and can be reused across multiple executions.
 Pipelines can be joined together, branched, and run in parallel.
 
-One advantage of this this pattern comes from its ability to surround / augment methods with things like
-- Logging
-- Error handling
-- Retry logic
-- Idempotency checks
-- 
+Key goals of this library are to:
+
+1. Allow you write a processing pipeline where its easier to visualise the steps, like a workflow.  
+1. Allow you to capture cross cutting concerns as `Inspector`'s (see below), `Middleware` and `Filter`'s that can be added on the fly, or written as re-usable classes if they are more broadly useful.
+1. Provide a set of broadly useful `Inspector` `Middleware` and `Filter`'s that can be used out of the box.` to add standard and tested behviours for things like:-    - Timeouts
+    - Idempotency
+    - Retries (using Polly Policies)
+    - Logging
+    - Parallel Processing - via Branching etc.
 
 ## How Does This Compare To Other Solutions?
 
