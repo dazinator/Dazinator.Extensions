@@ -91,7 +91,7 @@ services.AddPipelines(pipelines =>
 // Usage
 var registry = serviceProvider.GetRequiredService();
 var pipeline = registry.GetPipeline("order-processing");
-await pipeline.Run();
+await pipeline.Run(); // pass optional cancellation token.
 
 // Output:
 // Starting order processing...
