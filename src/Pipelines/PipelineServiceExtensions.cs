@@ -29,7 +29,7 @@ public class PipelinesServicesBuilder
 
     public IServiceCollection Services { get; }
 
-    public PipelinesServicesBuilder AddPipeline(        
+    public PipelinesServicesBuilder Add(        
          string name,
          Action<PipelineBuilder> configure)
     {

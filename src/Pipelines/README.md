@@ -42,7 +42,7 @@ There is added support for things such as branching and parallel execution, and 
 // Service configuration
 services.AddPipelines(pipelines => 
 {
-    pipelines.AddPipeline("order-processing", builder =>
+    pipelines.Add("order-processing", builder =>
     {
         builder
             .UseFilters() // this call may not be necessary in future versions.
