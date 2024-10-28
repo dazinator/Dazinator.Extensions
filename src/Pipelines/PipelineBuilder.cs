@@ -14,8 +14,8 @@ public class PipelineBuilder
     private readonly List<Func<IServiceProvider, IPipelineInspector>> _inspectorFactories = new();
 
     private readonly Dictionary<Type, object> _extensionState = new();
-  
-    private bool _isBuilt;
+
+    private bool _isBuilt = false;
 
     public IServiceProvider Services { get; init; }
     public PipelineBuilder(IServiceProvider rootProvider)
@@ -48,7 +48,7 @@ public class PipelineBuilder
     }
 
     private PipelineStep CreateInspectedStep(PipelineStep step, string stepId, string stepType, IServiceProvider sp, int stepIndex)
-    {       
+    {
 #pragma warning disable IDE0022 // Use expression body for method
         return async context =>
         {
@@ -91,11 +91,11 @@ public class PipelineBuilder
         };
 #pragma warning restore IDE0022 // Use expression body for method
     }
-       
+
 
     private static string GetStepId(string? stepId) => stepId ?? "Anonymous";
 
-    internal int CurrentStepIndex => _components.Count - 1;    
+    internal int CurrentStepIndex => _components.Count - 1;
 
     public void Add(Func<PipelineStep, PipelineStep> item, string? stepId, [CallerMemberName] string? stepTypeName = null)
     {
@@ -135,6 +135,7 @@ public class PipelineBuilder
             throw new InvalidOperationException("Pipeline has already been built. PipelineBuilder instances should only be built once.");
         }
 
+        _isBuilt = true;
         ResolveInspectors(Services);
 
         PipelineStep pipeline = _ => Task.CompletedTask;
@@ -144,15 +145,16 @@ public class PipelineBuilder
             pipeline = component(Services, pipeline);
         }
 
-        return new Pipeline(pipeline, Services);
+        return new Pipeline(pipeline, Services, _inspectors.ToList());
+
     }
 
     private void ResolveInspectors(IServiceProvider rootProvider)
     {
-       // var allInspectors = new List<IPipelineInspector>();
+        // var allInspectors = new List<IPipelineInspector>();
 
         // Add directly registered inspectors
-       // allInspectors.AddRange(_inspectors);
+        // allInspectors.AddRange(_inspectors);
 
         // Resolve inspector types
         foreach (var type in _inspectorTypes)
@@ -165,20 +167,7 @@ public class PipelineBuilder
         foreach (var factory in _inspectorFactories)
         {
             _inspectors.Add(factory(rootProvider));
-        }       
-    }
-
-    public PipelineBuilder WrapLastComponent(
-       Func<Func<IServiceProvider, PipelineStep, PipelineStep>,
-           Func<IServiceProvider, PipelineStep, PipelineStep>> wrapper)
-    {
-        if (_components.Count == 0)
-        {
-            throw new InvalidOperationException("No component to wrap");
         }
-
-        _components[^1] = wrapper(_components[^1]);
-        return this;
     }
 
 
@@ -190,7 +179,7 @@ public class PipelineBuilder
         {
             branchBuilder.AddInspector(inspector);
         }
-        
+
         return branchBuilder;
     }
 
@@ -211,25 +200,7 @@ public class PipelineBuilder
     {
         return _extensionState.ContainsKey(typeof(T));
     }
-    #endregion
-
-    // public PipelineStep Build(IServiceProvider rootProvider) => Build(rootProvider, _ => Task.CompletedTask);
-
-    //private PipelineStep Build(IServiceProvider provider, PipelineStep final)
-    //{
-
-    //    var pipeline = final;
-    //    var componentsToProcess = _components.AsEnumerable().Reverse().ToList();
-
-    //    foreach (var component in componentsToProcess)
-    //    {
-    //        var currentComponent = component;
-    //        var previousPipeline = pipeline;
-    //        pipeline = ct => currentComponent(provider, previousPipeline)(ct);
-    //    }
-
-    //    return pipeline;
-    //}
+    #endregion   
 
 }
 

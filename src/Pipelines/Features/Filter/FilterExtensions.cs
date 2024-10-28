@@ -1,17 +1,9 @@
 namespace Dazinator.Extensions.Pipelines;
 
 using Dazinator.Extensions.Pipelines.Features.Filter;
-using Microsoft.Extensions.DependencyInjection;
 
 public static class FilterExtensions
-{
-
-    //public static IServiceCollection AddPipelinesFilterExecutionInspector(this IServiceCollection services)
-    //{
-    //  //  services.AddTransient<FilterRegistry>();
-    //   // services.AddTransient<FilterExecutionInspector>();
-    //    return services;
-    //}
+{ 
 
     /// <summary>
     /// Adds filter support to the pipeline. This extension must be called exactly once per pipeline,

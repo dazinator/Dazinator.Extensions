@@ -36,7 +36,7 @@ public static class IdempotencyExtensions
             registry.AddFilter(
                 sp => new IdempotencyFilter(
                     sp.GetRequiredService<IIdempotencyStateManager>(),
-                    options.Key,
+                    options.Key ?? string.Empty,
                      options.CheckCompleted));
         });
 

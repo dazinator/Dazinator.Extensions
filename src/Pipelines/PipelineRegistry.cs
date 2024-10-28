@@ -22,7 +22,9 @@ public class PipelineRegistry
         {
             var definition = _definitions.Get(name);
             if (definition.Configure == null)
+            {
                 throw new InvalidOperationException($"Pipeline '{name}' not configured");
+            }
 
             var builder = new PipelineBuilder(_serviceProvider);
             definition.Configure(builder);

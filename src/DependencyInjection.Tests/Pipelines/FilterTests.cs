@@ -9,7 +9,7 @@ using Dazinator.Extensions.Pipelines.Features.Filter;
 [UnitTest]
 public class FilterTests
 {
-    private IServiceProvider _serviceProvider;
+    private IServiceProvider? _serviceProvider;
 
     public FilterTests(ITestOutputHelper testOutputHelper)
     {
@@ -20,7 +20,7 @@ public class FilterTests
 
     private PipelineBuilder CreatePipelineBuilder(IServiceCollection? configureServices = null)
     {
-        configureServices = configureServices ?? new ServiceCollection();
+        configureServices ??= new ServiceCollection();
         _serviceProvider = configureServices.BuildServiceProvider();
         return new PipelineBuilder(_serviceProvider);
     }
@@ -68,10 +68,11 @@ public class FilterTests
 
     private class SkippingFilter : IStepFilter
     {
-        public async Task BeforeStepAsync(PipelineStepContext context)
+        public Task BeforeStepAsync(PipelineStepContext context)
         {
             // Setting ShouldSkip will prevent the step from executing
             context.ShouldSkip = true;
+            return Task.CompletedTask;
         }
 
         public Task AfterStepAsync(PipelineStepContext context)
@@ -114,8 +115,7 @@ public class FilterTests
     public async Task Filter_CanResolveFromServices()
     {
         // Arrange
-        var services = new ServiceCollection();
-        var filterExecuted = false;
+        var services = new ServiceCollection();      
         services.AddScoped<TestServiceFilter>();
 
         var builder = CreatePipelineBuilder(services);
@@ -133,7 +133,7 @@ public class FilterTests
         await pipeline.Run();
 
         // Assert
-        var filter = _serviceProvider.GetRequiredService<TestServiceFilter>();
+        var filter = _serviceProvider!.GetRequiredService<TestServiceFilter>();
         Assert.True(filter.WasExecuted);
     }
 

@@ -28,20 +28,21 @@ public class PipelineContext
 
     internal IStepStateAccessor StepState => new StepStateAccessor(this);
 
-    public PipelineContext(IServiceProvider serviceProvider, CancellationToken cancellationToken)
+    public PipelineContext(IServiceProvider serviceProvider, CancellationToken cancellationToken, Pipeline parentPipeline)
     {
         ServiceProvider = serviceProvider;
         CancellationToken = cancellationToken;
-      
+        ParentPipeline = parentPipeline;
     }
 
     public IServiceProvider ServiceProvider { get; set; }
     public CancellationToken CancellationToken { get; set; }
+    internal Pipeline ParentPipeline { get; }
 
     // Create a new context with clean options for parallel branches
-    internal PipelineContext CreateBranchContext()
+    internal PipelineContext CreateBranchContext(Pipeline branch)
     {
-        return new PipelineContext(ServiceProvider, CancellationToken);
+        return new PipelineContext(ServiceProvider, CancellationToken, branch);
     }
 
     internal class StepStateAccessor : IStepStateAccessor
