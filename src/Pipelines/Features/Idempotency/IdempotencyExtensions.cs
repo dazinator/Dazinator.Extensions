@@ -4,30 +4,42 @@ namespace Dazinator.Extensions.Pipelines;
 using System;
 using System.Threading.Tasks;
 using Dazinator.Extensions.Pipelines.Features.Idempotency;
+using Microsoft.Extensions.DependencyInjection;
 
 public static class IdempotencyExtensions
 {
     public static PipelineBuilder WithIdempotency(
-        this PipelineBuilder builder,
-        Action<IdempotencyOptions> configure)
+         this PipelineBuilder builder,
+         string key,
+         Func<PipelineContext, Task<bool>>? checkCompleted = null)
     {
-        // Using the core Configure mechanism under the hood
-        return builder.Configure<IdempotencyOptions>(options =>
+        return builder.AddFilters((registry) =>
         {
-            configure(options);
+            registry.AddFilter(
+                    sp => new IdempotencyFilter(
+                    sp.GetRequiredService<IIdempotencyStateManager>(),
+                    key,
+                     checkCompleted));
         });
     }
 
-    // Overload for async check configuration
+
     public static PipelineBuilder WithIdempotency(
         this PipelineBuilder builder,
-        string key,
-        Func<PipelineContext, Task<bool>> checkCompleted)
+        Action<IdempotencyOptions> configure)
     {
-        return builder.Configure<IdempotencyOptions>(options =>
+        var options = new IdempotencyOptions();
+        configure(options);
+
+        return builder.AddFilters((registry) =>
         {
-            options.Key = key;
-            options.CheckCompleted = checkCompleted;
+            registry.AddFilter(
+                sp => new IdempotencyFilter(
+                    sp.GetRequiredService<IIdempotencyStateManager>(),
+                    options.Key,
+                     options.CheckCompleted));
         });
+
     }
+
 }

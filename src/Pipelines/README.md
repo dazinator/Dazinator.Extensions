@@ -215,6 +215,117 @@ These IDs appear in your inspector contexts (see section on Inspectors below), m
 - Debug issues
 - Create audit trails
 
+### Filters
+Filters provide step-level behaviors that can be configured for specific pipeline steps. Unlike middleware which affects the entire pipeline, filters are scoped to individual steps:
+
+```csharp
+// Basic logging filter
+public class LoggingFilter : IStepFilter
+{
+    private readonly string _category;
+    
+    public LoggingFilter(string category)
+    {
+        _category = category;
+    }
+
+    public Task BeforeStepAsync(PipelineStepContext context)
+    {
+        Console.WriteLine($"[{_category}] Starting step: {context.StepId}");
+        return Task.CompletedTask;
+    }
+
+    public Task AfterStepAsync(PipelineStepContext context)
+    {
+        Console.WriteLine($"[{_category}] Completed step: {context.StepId}");
+        return Task.CompletedTask;
+    }
+}
+
+// Filter that can conditionally skip step execution
+public class ConditionalFilter : IStepFilter
+{
+    private readonly Func<PipelineContext, Task<bool>> _shouldProcess;
+
+    public ConditionalFilter(Func<PipelineContext, Task<bool>> shouldProcess)
+    {
+        _shouldProcess = shouldProcess;
+    }
+
+    public async Task BeforeStepAsync(PipelineStepContext context)
+    {
+        if (!await _shouldProcess(context.PipelineContext))
+        {
+            // Setting ShouldSkip prevents the step from executing
+            context.ShouldSkip = true;
+        }
+    }
+
+    public Task AfterStepAsync(PipelineStepContext context) => Task.CompletedTask;
+}
+
+// Filters instances can be added directly
+builder
+    .UseFilters()
+    .Run(async ctx => await ProcessOrder())
+    .AddFilters(registry =>
+    {
+        // Creates new instance for this step
+        registry.AddFilter(sp => new LoggingFilter("Orders"));
+        // Skip step if condition not met
+        registry.AddFilter(sp => new ConditionalFilter(
+            async ctx => await ShouldProcessOrder(ctx)));
+    });
+
+// Or resolved from DI
+public class TransactionFilter : IStepFilter
+{
+    private readonly ITransactionService _transactionService;
+
+    public TransactionFilter(ITransactionService transactionService) 
+    {
+        _transactionService = transactionService;
+    }
+
+    public async Task BeforeStepAsync(PipelineStepContext context)
+    {
+        await _transactionService.BeginAsync();
+    }
+
+    public async Task AfterStepAsync(PipelineStepContext context)
+    {
+        await _transactionService.CommitAsync();
+    }
+}
+
+// Register with appropriate lifecycle
+services.AddScoped<TransactionFilter>();
+
+// Use from DI
+builder
+    .UseFilters()
+    .Run(async ctx => await ProcessOrder())
+    .AddFilters(registry =>
+    {
+        // Will be resolved from current execution scope
+        registry.AddFilterFromServices<TransactionFilter>();
+    });
+```
+
+Filter Lifetime Considerations:
+- Filters resolved from DI follow standard DI lifecycle rules
+- Singleton filters will share state across all pipeline executions
+- Scoped filters get new instances per DI scope.
+  - The service provider used to resolve filters is the current execution scope.
+  - When using `UseNewScope()`, filters resolved from DI will get new instances per that scope
+
+Filter Execution Order:
+- BeforeStepAsync executes in registration order (1, 2, 3)
+- The step executes (if not skipped)
+- AfterStepAsync executes in reverse order (3, 2, 1)
+- Any filter can prevent step execution by setting `context.ShouldSkip = true`
+- If any filter sets `ShouldSkip` in it's `BeforeStepAsync`, then the step and remaining filters' BeforeStepAsync and AfterStepAsync are skipped
+
 ## API Reference
 
 ### Middleware

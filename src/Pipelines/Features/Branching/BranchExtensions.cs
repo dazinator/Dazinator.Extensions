@@ -17,9 +17,9 @@ public static class BranchExtensions
 #pragma warning disable IDE0022 // Use expression body for method
         return builder.When(condition, context =>
         {
-            var branchBuilder = builder.CreateBranch();        
+            var branchBuilder = builder.CreateBranch(context.ServiceProvider);        
             configureBranch(branchBuilder);
-            var branchPipeline = branchBuilder.Build(context.ServiceProvider);               
+            var branchPipeline = branchBuilder.Build();               
             return branchPipeline.BranchFrom(context);
         }, stepId);
 #pragma warning restore IDE0022 // Use expression body for method
@@ -55,9 +55,9 @@ public static class BranchExtensions
             {
                 if (await condition(context))
                 {
-                    var branchBuilder = builder.CreateBranch();
+                    var branchBuilder = builder.CreateBranch(context.ServiceProvider);
                     configureBranch(branchBuilder);
-                    var branchPipeline = branchBuilder.Build(context.ServiceProvider);
+                    var branchPipeline = branchBuilder.Build();
                     await branchPipeline.BranchFrom(context);
                 }
             }
@@ -80,10 +80,10 @@ public static class BranchExtensions
         {
             var tasks = items.Select(item =>
             {
-                var branchBuilder = builder.CreateBranch();
+                var branchBuilder = builder.CreateBranch(context.ServiceProvider);
                 configureBranch(branchBuilder, item);
                 // Use the context's service provider instead of the outer sp
-                var branchPipeline = branchBuilder.Build(context.ServiceProvider);
+                var branchPipeline = branchBuilder.Build();
                 return branchPipeline.BranchFrom(context);
             });
 
@@ -104,10 +104,10 @@ public static class BranchExtensions
             var items = await getItems(context);
             var tasks = items.Select(item =>
             {
-                var branchBuilder = builder.CreateBranch();
+                var branchBuilder = builder.CreateBranch(context.ServiceProvider);
                 configureBranch(branchBuilder, item);
                 // Use the context's service provider instead of the outer sp
-                var branchPipeline = branchBuilder.Build(context.ServiceProvider);
+                var branchPipeline = branchBuilder.Build();
                 return branchPipeline.BranchFrom(context);
             });
 
@@ -129,10 +129,10 @@ public static class BranchExtensions
 
             var tasks = items.Select(item =>
             {
-                var branchBuilder = builder.CreateBranch();
+                var branchBuilder = builder.CreateBranch(context.ServiceProvider);
                 configureBranch(branchBuilder, item);
                 // Use the context's service provider instead of the outer sp
-                var branchPipeline = branchBuilder.Build(context.ServiceProvider);
+                var branchPipeline = branchBuilder.Build();
                 return branchPipeline.BranchFrom(context);
             });
 

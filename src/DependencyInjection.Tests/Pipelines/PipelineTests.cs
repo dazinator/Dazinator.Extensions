@@ -9,6 +9,7 @@ using Xunit.Categories;
 [UnitTest]
 public class PipelineBuilderTests
 {
+    private IServiceProvider _serviceProvider;
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0021:Use expression body for constructor", Justification = "<Pending>")]
     public PipelineBuilderTests(ITestOutputHelper testOutputHelper)
@@ -17,6 +18,15 @@ public class PipelineBuilderTests
     }
 
     public ITestOutputHelper TestOutputHelper { get; }
+
+    private PipelineBuilder CreatePipelineBuilder(IServiceCollection? configureServices = null)
+    {
+        configureServices = configureServices ?? new ServiceCollection();
+        //var services = new ServiceCollection();
+        //  configureServices?.Invoke(services);
+        _serviceProvider = configureServices.BuildServiceProvider();
+        return new PipelineBuilder(_serviceProvider);
+    }
 
     #region Middleware
 
@@ -35,11 +45,11 @@ public class PipelineBuilderTests
         var sp = services.BuildServiceProvider();
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder(services)
             .UseMiddleware<TestMiddleware>("First")
             .UseMiddleware<AnotherTestMiddleware>("Second");
 
-        var pipeline = builder.Build(sp);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -62,11 +72,11 @@ public class PipelineBuilderTests
         var sp = services.BuildServiceProvider();
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder(services)
             .UseMiddleware<TestMiddleware>("first", "First")
             .UseMiddleware<TestMiddleware>("second", "Second");
 
-        var pipeline = builder.Build(sp);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -142,7 +152,7 @@ public class PipelineBuilderTests
         var sp = services.BuildServiceProvider();
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder(services)
             .Use(next => async ct =>
             {
                 executionOrder.Add("Before root scope");
@@ -167,7 +177,7 @@ public class PipelineBuilderTests
                 }
             );
 
-        var pipeline = builder.Build(sp);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Output execution order for debugging
@@ -188,12 +198,12 @@ public class PipelineBuilderTests
     public async Task CancellationToken_IsRespectedInRunAsync()
     {
         // Arrange
-        var services = new ServiceCollection().BuildServiceProvider();
+        var services = new ServiceCollection();       
         using var cts = new CancellationTokenSource();
         var taskWasCancelled = false;
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder(services)
             .RunAsync(async context =>
             {
                 try
@@ -207,7 +217,7 @@ public class PipelineBuilderTests
                 }
             });
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(cts.Token);
 
         // Assert
@@ -273,17 +283,16 @@ public class PipelineBuilderTests
     public async Task InspectorTracksExecution()
     {
         // Arrange
-        var inspector = new TestInspector();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var inspector = new TestInspector();       
+            //.BuildServiceProvider();
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .AddInspector(inspector)
             .Use(next => async ct => await next(ct), "Step1")
             .Use(next => async ct => await next(ct), "Step2");
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -300,16 +309,15 @@ public class PipelineBuilderTests
     public async Task InspectorTracksMiddlewareActionsCorrectly()
     {
         // Arrange
-        var allEvents = new List<string>();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var allEvents = new List<string>();      
+            //.BuildServiceProvider();
 
         var inspector = new TestInspectorEvents();
         inspector.BeforeStep += (ctx) => allEvents.Add($"Inspector Before {ctx.StepId}");
         inspector.AfterStep += (ctx) => allEvents.Add($"Inspector After {ctx.StepId}");
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .AddInspector(inspector)
             .Use(next => async ct =>
             {
@@ -324,7 +332,7 @@ public class PipelineBuilderTests
                 allEvents.Add("Middleware2 End");
             }, "Step2");
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -347,18 +355,17 @@ public class PipelineBuilderTests
     public async Task InspectorCatchesExceptions()
     {
         // Arrange
-        var inspector = new TestInspector();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var inspector = new TestInspector();     
+         
 
         var expectedException = new Exception("Test Exception");
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .AddInspector(inspector)
             .Use(next => ct => throw expectedException, "FailingStep");
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         var exception = await Assert.ThrowsAsync<Exception>(() => pipeline.Run(default));
 
         // Assert
@@ -370,16 +377,14 @@ public class PipelineBuilderTests
     public async Task InspectorTracksBranchSteps()
     {
         // Arrange
-        var allEvents = new List<string>();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var allEvents = new List<string>();     
 
         var inspector = new TestInspectorEvents();
         inspector.BeforeStep += (ctx) => allEvents.Add($"Inspector Before {ctx.StepId}");
         inspector.AfterStep += (ctx) => allEvents.Add($"Inspector After {ctx.StepId}");
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .AddInspector(inspector)
             .Use(next => async ct =>
             {
@@ -403,7 +408,7 @@ public class PipelineBuilderTests
                 "BranchOperation"
             );
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -434,12 +439,10 @@ public class PipelineBuilderTests
     public async Task When_ContinuesPipelineWhenConditionNotMet()
     {
         // Arrange
-        var executionOrder = new List<string>();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var executionOrder = new List<string>();       
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .Use(next => async context =>
             {
                 executionOrder.Add("Before When");
@@ -459,7 +462,7 @@ public class PipelineBuilderTests
                 await next(context);
             });
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -475,12 +478,10 @@ public class PipelineBuilderTests
     public async Task When_ExecutesActionAndContinuesPipelineWhenConditionMet()
     {
         // Arrange
-        var executionOrder = new List<string>();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var executionOrder = new List<string>();       
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .Use(next => async context =>
             {
                 executionOrder.Add("Before When");
@@ -497,7 +498,7 @@ public class PipelineBuilderTests
                 await next(context);
             });
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -514,12 +515,10 @@ public class PipelineBuilderTests
     public async Task When_SupportsNestedPipelines()
     {
         // Arrange
-        var executionOrder = new List<string>();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var executionOrder = new List<string>();     
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .Use(next => async context =>
             {
                 executionOrder.Add("Main Pipeline Start");
@@ -530,14 +529,14 @@ public class PipelineBuilderTests
                 context => true,
                 async context =>
                 {
-                    var nestedPipeline = new PipelineBuilder()
+                    var nestedPipeline = new PipelineBuilder(context.ServiceProvider)
                         .Use(next => async ctx =>
                         {
                             executionOrder.Add("Nested Pipeline Start");
                             await next(ctx);
                             executionOrder.Add("Nested Pipeline End");
                         })
-                        .Build(context.ServiceProvider);
+                        .Build();
 
                     await nestedPipeline.BranchFrom(context);
                 }
@@ -548,7 +547,7 @@ public class PipelineBuilderTests
                 await next(context);
             });
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -566,12 +565,10 @@ public class PipelineBuilderTests
     public async Task When_SupportsChainingMultipleConditions()
     {
         // Arrange
-        var executionOrder = new List<string>();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var executionOrder = new List<string>();     
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .When(
                 context => Task.FromResult(true),
                 context => { executionOrder.Add("First When"); return Task.CompletedTask; }
@@ -585,7 +582,7 @@ public class PipelineBuilderTests
                 context => { executionOrder.Add("Third When"); return Task.CompletedTask; }
             );
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -606,30 +603,30 @@ public class PipelineBuilderTests
         var serviceAccessCount = 0;
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder(services)
             .When(
                 context =>
                 {
                     var service = context.ServiceProvider.GetRequiredService<ITestService>();
                     serviceAccessCount++;
-                    return Task.FromResult(true);
+                    return true;
                 },
                 async context =>
                 {
-                    var nestedPipeline = new PipelineBuilder()
+                    var nestedPipeline = new PipelineBuilder(context.ServiceProvider)
                         .Use(next => async ctx =>
                         {
                             var service = ctx.ServiceProvider.GetRequiredService<ITestService>();
                             serviceAccessCount++;
                             await next(ctx);
                         })
-                        .Build(context.ServiceProvider);
+                        .Build();
 
                     await nestedPipeline.BranchFrom(context);
                 }
             );
 
-        var pipeline = builder.Build(sp);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -643,12 +640,10 @@ public class PipelineBuilderTests
     public async Task Branch_ExecutesWhenConditionMet()
     {
         // Arrange
-        var branchExecuted = false;
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var branchExecuted = false;      
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .UseBranch(
                 (context) => Task.FromResult(true),
                 branch => branch.Use(next => async ct =>
@@ -658,7 +653,7 @@ public class PipelineBuilderTests
                 })
             );
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -670,11 +665,9 @@ public class PipelineBuilderTests
     {
         // Arrange
         var branchExecuted = false;
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
-
+     
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .UseBranch(
                 (ctx) => Task.FromResult(false),
                 branch => branch.Use(next => async ctx =>
@@ -684,7 +677,7 @@ public class PipelineBuilderTests
                 })
             );
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -695,12 +688,10 @@ public class PipelineBuilderTests
     public async Task Branch_ContinuesPipelineWhenConditionNotMet()
     {
         // Arrange
-        var executionOrder = new List<string>();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var executionOrder = new List<string>();      
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .Use(next => async context =>
             {
                 executionOrder.Add("Before Branch");
@@ -721,7 +712,7 @@ public class PipelineBuilderTests
                 await next(context);
             });
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -737,14 +728,12 @@ public class PipelineBuilderTests
     public async Task ParallelBranchesExecuteAllBranches()
     {
         // Arrange
-        var executedBranches = new HashSet<string>();
-        var services = new ServiceCollection()
-            .BuildServiceProvider();
+        var executedBranches = new HashSet<string>();      
 
         var items = new[] { "Item1", "Item2", "Item3" };
         var results = Task.FromResult<IEnumerable<string>>(items);
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .UseParallelBranches(
                 async (ctx) => await results,
                 (branch, item) => branch.Use(next => async ctx =>
@@ -757,7 +746,7 @@ public class PipelineBuilderTests
                 })
             );
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -776,7 +765,7 @@ public class PipelineBuilderTests
         var serviceWasAccessed = false;
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder(services)
             .UseBranch(
                 (ctx) =>
                 {
@@ -787,7 +776,7 @@ public class PipelineBuilderTests
                 branch => branch.Run(() => { })
             );
 
-        var pipeline = builder.Build(sp);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -801,14 +790,13 @@ public class PipelineBuilderTests
     public async Task Run_ExecutesAction()
     {
         // Arrange
-        var executed = false;
-        var services = new ServiceCollection().BuildServiceProvider();
+        var executed = false;      
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .Run(() => executed = true);
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -819,18 +807,17 @@ public class PipelineBuilderTests
     public async Task RunAsync_ExecutesAsyncAction()
     {
         // Arrange
-        var executed = false;
-        var services = new ServiceCollection().BuildServiceProvider();
+        var executed = false;      
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .RunAsync(async ctx =>
             {
                 await Task.Delay(1, ctx.CancellationToken);
                 executed = true;
             });
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -841,17 +828,16 @@ public class PipelineBuilderTests
     public async Task TryRun_HandlesException()
     {
         // Arrange
-        var exceptionHandled = false;
-        var services = new ServiceCollection().BuildServiceProvider();
+        var exceptionHandled = false;      
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .TryRun(
                 () => throw new Exception("Test exception"),
                 ex => exceptionHandled = true
             );
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -863,11 +849,10 @@ public class PipelineBuilderTests
     {
         // Arrange
         var exceptionHandled = false;
-        var pipelineContinued = false;
-        var services = new ServiceCollection().BuildServiceProvider();
+        var pipelineContinued = false;       
 
         // Act
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .TryRunAsync(
                 async ctx =>
                 {
@@ -878,7 +863,7 @@ public class PipelineBuilderTests
             )
             .Run(() => pipelineContinued = true);
 
-        var pipeline = builder.Build(services);
+        var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
@@ -900,13 +885,13 @@ public class PipelineBuilderTests
             stepIndices.Add(context.PipelineContext.CurrentStepIndex);
         });
 
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
          .AddInspector(inspector)
          .Use(next => async ctx => await next(ctx), "Step1")
          .Use(next => async ctx => await next(ctx), "Step2");
 
         // Act
-        var pipeline = builder.Build(new ServiceCollection().BuildServiceProvider());
+        var pipeline = builder.Build();
         await pipeline.Run();
 
         // Assert
@@ -923,7 +908,7 @@ public class PipelineBuilderTests
             stepIndices[context.StepId] = context.PipelineContext.CurrentStepIndex;
         });
 
-        var builder = new PipelineBuilder()
+        var builder = CreatePipelineBuilder()
             .AddInspector(inspector)
             .Use(next => async ctx => await next(ctx), "Step1");
 
@@ -941,7 +926,7 @@ public class PipelineBuilderTests
         builder.Use(next => async ctx => await next(ctx), "Step2");
 
         // Act
-        var pipeline = builder.Build(new ServiceCollection().BuildServiceProvider());
+        var pipeline = builder.Build();
         await pipeline.Run();
 
         // Assert
