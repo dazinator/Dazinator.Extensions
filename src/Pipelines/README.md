@@ -40,7 +40,6 @@ There is added support for things such as branching and parallel execution, and 
 
 ```csharp
 // Service configuration
-// Service configuration
 services.AddPipelines(pipelines => 
 {
     pipelines.AddPipeline("order-processing", builder =>
