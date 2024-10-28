@@ -46,7 +46,7 @@ services.AddPipelines(pipelines =>
     {
         builder
             .UseFilters() // this call may not be necessary in future versions.
-            // .UseNewScope() // establishes a new DI scope for onward steps in the pipeline - useful if you want to inject dependencies into Filters or Middleware classes - not shown here.
+            // .UseNewScope() // establishes a new DI scope for onward steps in the pipeline that use DI -not shown here.
             // "UseXYZ" adds "Middleware" (runs before and after next steps)
             .Use(next => async ctx => {
                 Console.WriteLine("Starting order processing...");
