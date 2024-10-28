@@ -60,7 +60,7 @@ services.AddPipelines(pipelines =>
                 await Task.Delay(100); // Simulate work
                 Console.WriteLine("Processing order...");
             })
-            .WithIdempotency(opt => { // "WithXYZ" adds a "Filter" . Runs before and after the step above and can optionally skip it.
+            .WithIdempotency(opt => { // "WithXYZ" adds a "Filter" - this one is  an out of the box filter. Runs before and after the step above and can optionally skip it (see below).
                 opt.Key = "order-123";
                 opt.CheckCompleted = async ctx => {
                     await Task.Delay(10); // Simulate check
