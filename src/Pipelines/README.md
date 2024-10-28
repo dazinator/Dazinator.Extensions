@@ -39,54 +39,82 @@ Think of this as building a middleware pipeline like in ASP.NET Core, but here w
 There is added support for things such as branching and parallel execution, and more features discussed below.
 
 ```csharp
-var builder = new PipelineBuilder()
-   // Create a new DI scope
-   .UseNewScope()  
-   
-   // Basic middleware - delegate
-   .Use(next => async ctx => {
-       var logger = ctx.ServiceProvider.GetRequiredService();
-       logger.LogInformation("Starting...");
-       await next(ctx);
-   })
-   
-   // Simple synchronous action
-   .Run(() => Console.WriteLine("Performing initialization..."))
-   
-   // Conditional branch
-   .UseBranch(
-       async ctx => await NeedsMigration(ctx), // the condition to enable the branch
-       branch => branch // this is like a whole other nested pipeline you can configure here
-           // Async action within branch
-           .RunAsync(async ctx => 
-           {
-               await Task.Delay(100, ctx.CancellationToken); // Simulate work
-               Console.WriteLine("Migration complete");
-           })
-   )
-   
-   // Parallel execution
-   .UseParallelBranches(
-       new[] { "Tenant1", "Tenant2" },
-       (branch, tenant) => branch
-           .UseNewScope()
-           .Run(() => Console.WriteLine($"Initializing {tenant}"))
-   );
+// Service configuration
+// Service configuration
+services.AddPipelines(pipelines => 
+{
+    pipelines.AddPipeline("order-processing", builder =>
+    {
+        builder
+            .UseFilters() // this call may not be necessary in future versions.
+            // .UseNewScope() // establishes a new DI scope for onward steps in the pipeline - useful if you want to inject dependencies into Filters or Middleware classes - not shown here.
+            // "UseXYZ" adds "Middleware" (runs before and after next steps)
+            .Use(next => async ctx => {
+                Console.WriteLine("Starting order processing...");
+                // var orderMetrics = ctx.ServiceProvider.GetRequiredService<IOrderMetrics>(); // but should use a middleware class for this instead to have deps injected.
+                // await orderService.Started();
+                await next(ctx);              
+                Console.WriteLine("Order processing complete.");
+            })
+            // "RunXYZ" adds an "Action" - is the business end of the logic you want to execute.
+            .RunAsync(async ctx => {
+                await Task.Delay(100); // Simulate work
+                Console.WriteLine("Processing order...");
+            })
+            .WithIdempotency(opt => { // "WithXYZ" adds a "Filter" . Runs before and after the step above and can optionally skip it.
+                opt.Key = "order-123";
+                opt.CheckCompleted = async ctx => {
+                    await Task.Delay(10); // Simulate check
+                    return false; // Not yet processed
+                };
+            })
+            // Conditional branch for payment processing
+            .UseBranch(
+                async ctx => {
+                    Console.WriteLine("Checking if payment needed...");
+                    return true; // Simulate payment required
+                },
+                branch => branch // we are building another pipeline as a branch here..
+                    .RunAsync(async ctx => {
+                        await Task.Delay(50);
+                        Console.WriteLine("Processing payment...");
+                    })
+            )
+            // Parallel notification branches
+            .UseParallelBranches(
+                new[] { "Customer", "Warehouse", "Shipping" },
+                (branch, recipient) => branch // we are building another pipeline as a branch here..
+                    .Run(() => Console.WriteLine($"Sending notification to {recipient}"))
+            );
+    });
+});
 
-var pipeline = builder.Build(services);
-await pipeline.Run(); // execute the pipeline!
+// Usage
+var registry = serviceProvider.GetRequiredService();
+var pipeline = registry.GetPipeline("order-processing");
+await pipeline.Run();
 
 // Output:
-// Starting...
-// Performing initialization...
-// Migration complete
-// Initializing Tenant1
-// Initializing Tenant2
+// Starting order processing...
+// Processing order...
+// Checking if payment needed...
+// Processing payment...
+// Sending notification to Customer
+// Sending notification to Warehouse
+// Sending notification to Shipping
+// Order processing complete.
 ```
 
 Once you have built your pipeline, you can execute it as many times as you like.
 The pipeline is immutable and can be reused across multiple executions.
 Pipelines can be joined together, branched, and run in parallel.
+
+One advantage of this this pattern comes from its ability to surround / augment methods with things like
+- Logging
+- Error handling
+- Retry logic
+- Idempotency checks
+- 
 
 ## How Does This Compare To Other Solutions?
 
@@ -94,7 +122,7 @@ This library fills a specific gap between simple pipeline patterns and complex w
 
 | Solution | Focus | Strengths | Limitations | When To Use |
 |----------|-------|-----------|-------------|-------------|
-| **Pipeline Builder (this)** | General purpose processing pipelines | • Rich branching & parallel execution<br>• Explicit scope control<br>• DI friendly<br>• Simple but powerful API<br>• Built-in inspection | • Single machine execution<br>• In-memory only | • Application startup orchestration<br>• Multi-tenant operations<br>• Complex initialization flows<br>• Batch processing with branches |
+| **Pipeline Builder (this)** | General purpose processing pipelines | • Rich branching & parallel execution<br>• Explicit scope control<br>• Step-level filters<br>• DI friendly<br>• Simple but powerful API<br>• Built-in inspection | • Single machine execution<br>• In-memory only | • Application startup orchestration<br>• Multi-tenant operations<br>• Complex initialization flows<br>• Batch processing with branches |
 | MediatR Pipeline | CQRS and commands | • Simple to use<br>• Well established<br>• Good for CQRS | • No branching<br>• No parallel execution<br>• Limited scope control | • Request/response pipelines<br>• Command validation<br>• Simple cross cutting concerns |
 | ASP.NET Middleware | Web request pipeline | • HTTP specific features<br>• Well documented<br>• Standard approach | • Fixed scope per request<br>• No branching<br>• Web focused | • HTTP request handling<br>• Web specific middleware |
 | TPL Dataflow | Data processing pipelines | • High performance<br>• Good for data flows<br>• Mature | • Complex setup<br>• Less DI friendly<br>• Steeper learning curve | • Data processing<br>• Producer/consumer scenarios<br>• Parallel data processing |
