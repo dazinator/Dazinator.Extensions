@@ -169,21 +169,7 @@ public class PipelineBuilder
             _inspectors.Add(factory(rootProvider));
         }
     }
-
-
-    internal PipelineBuilder CreateBranch(IServiceProvider serviceProvider)
-    {
-        var branchBuilder = new PipelineBuilder(serviceProvider);
-        // Transfer inspectors
-        foreach (var inspector in _inspectors)
-        {
-            branchBuilder.AddInspector(inspector);
-        }
-
-        return branchBuilder;
-    }
-
-
+    
     #region Extension State
     internal void SetExtensionState<T>(T state) where T : class
     {
