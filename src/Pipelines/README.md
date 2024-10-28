@@ -117,6 +117,7 @@ Key goals of this library are to:
     - Retries (using Polly Policies)
     - Logging
     - Parallel Processing - via Branching etc.
+    - DI Scope management.
 
 ## How Does This Compare To Other Solutions?
 
