@@ -2,6 +2,7 @@ namespace Tests.Pipelines;
 
 using Dazinator.Extensions.Pipelines;
 using Dazinator.Extensions.Pipelines.Features.Skip;
+using Tests.Pipelines.Utils;
 using Xunit.Abstractions;
 using Xunit.Categories;
 
@@ -9,19 +10,14 @@ using Xunit.Categories;
 public class SkipConditionTests
 {
     private IServiceProvider? _serviceProvider;
-    private int _currentId = 0;
-    private readonly TestExecutionCollector _collector;
-
-    private readonly List<string> _executionOrder = new();
+    private readonly TestExecutionLogger _testExecutionLogger;  
 
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0021:Use expression body for constructor", Justification = "<Pending>")]
     public SkipConditionTests(ITestOutputHelper testOutputHelper)
     {
-        TestOutputHelper = testOutputHelper;
-        this.GetNextId = () => Interlocked.Increment(ref _currentId).ToString();
-        this.WriteNextIdToOutput = () => TestOutputHelper.WriteLine(GetNextId().ToString());
-        _collector = new TestExecutionCollector();
+        TestOutputHelper = testOutputHelper;       
+        _testExecutionLogger = new TestExecutionLogger(testOutputHelper);
 
     }
 
@@ -37,7 +33,7 @@ public class SkipConditionTests
         //var services = new ServiceCollection();
         //  configureServices?.Invoke(services);
         _serviceProvider = configureServices.BuildServiceProvider();
-        return new PipelineBuilder(_serviceProvider);
+        return new PipelineBuilder(_serviceProvider).UseFilters();
     }
 
     [Fact]
@@ -168,29 +164,25 @@ public class SkipConditionTests
     [Fact]
     public async Task SkipCondition_SupportsChainingMultipleConditions()
     {
-        // Arrange
-        var collector = new TestExecutionCollector();    
-
+           
 
         // Act
-        var builder = CreatePipelineBuilder()
-            .AddInspector(collector)
-            .Run(WriteNextIdToOutput)
+        var builder = CreatePipelineBuilder()          
+            .Run(_testExecutionLogger.WriteCurrentStepIdToLog, "A")
                 .WithSkipCondition(() => false)
-            .Run(WriteNextIdToOutput)
+            .Run(_testExecutionLogger.WriteCurrentStepIdToLog, "B")
                 .WithSkipCondition(() => false)
                 .WithSkipConditionAsync(() => Task.FromResult(false))
-            .Run(WriteNextIdToOutput)
+            .Run(_testExecutionLogger.WriteCurrentStepIdToLog, "C")
                 .WithSkipCondition(() => true)
-            .Run(WriteNextIdToOutput)
+            .Run(_testExecutionLogger.WriteCurrentStepIdToLog, "D")
                 .WithSkipCondition(() => false)
                 .WithSkipCondition(() => true);
 
         var pipeline = builder.Build();
         await pipeline.Run(default);
 
-        // Assert
-        await Verify(collector.Steps);
+        _testExecutionLogger.AssertLogsEqual(["A", "B"]);           
     }
 
 }

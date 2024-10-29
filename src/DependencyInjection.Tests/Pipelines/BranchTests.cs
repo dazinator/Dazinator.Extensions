@@ -11,8 +11,7 @@ public class BranchTests
 {
     private IServiceProvider? _serviceProvider;
     private int _currentId = 0;
-    private readonly TestExecutionCollector _collector;
-
+  
     private readonly List<string> _executionOrder = new();
 
 
@@ -21,8 +20,7 @@ public class BranchTests
     {
         TestOutputHelper = testOutputHelper;
         this.GetNextId = () => Interlocked.Increment(ref _currentId).ToString();
-        this.WriteNextIdToOutput = () => TestOutputHelper.WriteLine(GetNextId().ToString());
-        _collector = new TestExecutionCollector();
+        this.WriteNextIdToOutput = () => TestOutputHelper.WriteLine(GetNextId().ToString());     
 
     }
 

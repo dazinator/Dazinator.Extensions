@@ -8,8 +8,7 @@ using Xunit.Categories;
 public class MiddlewareTests
 {
     private IServiceProvider? _serviceProvider;
-    private int _currentId = 0;
-    private readonly TestExecutionCollector _collector;
+    private int _currentId = 0;   
 
     private readonly List<string> _executionOrder = new();
 
@@ -19,8 +18,7 @@ public class MiddlewareTests
     {
         TestOutputHelper = testOutputHelper;
         this.GetNextId = () => Interlocked.Increment(ref _currentId).ToString();
-        this.WriteNextIdToOutput = () => TestOutputHelper.WriteLine(GetNextId().ToString());
-        _collector = new TestExecutionCollector();
+        this.WriteNextIdToOutput = () => TestOutputHelper.WriteLine(GetNextId().ToString());   
 
     }
 

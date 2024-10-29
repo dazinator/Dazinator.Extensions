@@ -1,7 +1,6 @@
-namespace DependencyInjection.Tests.Pipelines;
+namespace Tests.Pipelines;
 
 using Dazinator.Extensions.Pipelines;
-using global::Tests.Pipelines;
 using global::Tests.Pipelines.Utils;
 using Xunit;
 using Xunit.Abstractions;

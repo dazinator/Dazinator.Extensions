@@ -1,4 +1,6 @@
 namespace Tests.Pipelines.Utils;
+
+using Dazinator.Extensions.Pipelines;
 using Xunit.Abstractions;
 
 public class TestExecutionLogger
@@ -18,6 +20,17 @@ public class TestExecutionLogger
     public int GetNextId()
     {
         return Interlocked.Increment(ref _currentId);
+    }
+
+    public void WriteCurrentStepIdToLog(PipelineContext context)
+    {
+        _executionLog.Add(context.CurrentStepId.ToString());
+    }
+
+    public Task WriteCurrentStepIdToLogAsync(PipelineContext context)
+    {
+        _executionLog.Add(context.CurrentStepId.ToString());
+        return Task.CompletedTask;
     }
 
     public void WriteNextIdToLog()
@@ -45,12 +58,17 @@ public class TestExecutionLogger
 
 
     public bool LogContains(string message)
-    {
+    {       
         return _executionLog.Contains(message);
     }
 
     public void AssertWasLogged(string message)
     {
         Assert.Contains(message, _executionLog);
+    }
+
+    public void AssertLogsEqual(string[] logs)
+    {
+        Assert.Equal(logs, _executionLog);       
     }
 }

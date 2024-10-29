@@ -47,12 +47,14 @@ public class PipelineBuilder
         _components.Add(item);
     }
 
-    private PipelineStep CreateInspectedStep(PipelineStep step, string stepId, string stepType, IServiceProvider sp, int stepIndex)
+    private PipelineStep CreateInspectedStep(PipelineStep step, string stepId, string stepType, IServiceProvider sp, int stepIndex, PipelineStep next)
     {
 #pragma warning disable IDE0022 // Use expression body for method
         return async context =>
         {
             context.CurrentStepIndex = stepIndex;
+            context.CurrentStepId = stepId;
+
             var stepContext = new PipelineStepContext(stepId, stepType, sp, context);
             var sw = Stopwatch.StartNew();
 
@@ -63,6 +65,8 @@ public class PipelineBuilder
                     await inspector.BeforeStepAsync(stepContext);
                     if (stepContext.ShouldSkip)
                     {
+                        // Even if we skip this step, we should continue the pipeline
+                        await next(context);
                         return; // Skip step execution if any inspector requests it
                     }
                 }
@@ -108,7 +112,8 @@ public class PipelineBuilder
                 GetStepId(stepId),
                 stepTypeName ?? "Unknown",
                 sp,
-                 index);
+                 index,
+                 next);
             return inspected;
         });
     }
@@ -169,7 +174,7 @@ public class PipelineBuilder
             _inspectors.Add(factory(rootProvider));
         }
     }
-    
+
     #region Extension State
     internal void SetExtensionState<T>(T state) where T : class
     {

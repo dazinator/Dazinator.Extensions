@@ -6,6 +6,8 @@ public class PipelineContext
     private readonly Dictionary<int, Dictionary<Type, object>> _stepState = new();
     internal int CurrentStepIndex { get; set; }
 
+    internal string CurrentStepId { get; set; }
+
     internal void SetStepState<T>(T state) where T : class
     {
         if (!_stepState.TryGetValue(CurrentStepIndex, out var stepState))
