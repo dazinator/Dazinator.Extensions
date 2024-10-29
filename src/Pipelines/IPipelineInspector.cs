@@ -7,5 +7,10 @@ public interface IPipelineInspector
     Task OnExceptionAsync(PipelineStepContext context);
 }
 
+public interface IInspectorInitialization
+{
+    void Initialize(PipelineBuilder builder);
+}
+
 
 

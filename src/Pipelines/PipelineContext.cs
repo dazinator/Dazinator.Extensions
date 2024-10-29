@@ -30,6 +30,15 @@ public class PipelineContext
 
     internal IStepStateAccessor StepState => new StepStateAccessor(this);
 
+    internal T? GetExtensionState<T>() where T : class
+    {
+        if (ParentPipeline.ExtensionState.TryGetValue(typeof(T), out var state))
+        {
+            return state as T;
+        }
+        return null;
+    }
+
     public PipelineContext(IServiceProvider serviceProvider, CancellationToken cancellationToken, Pipeline parentPipeline)
     {
         ServiceProvider = serviceProvider;

@@ -15,6 +15,7 @@ Build composable, inspectable execution pipelines with dependency injection supp
   - [Pipeline Context](#pipeline-context)
   - [Dependency Injection Scopes](#dependency-injection-scopes)
   - [Middleware vs Actions](#middleware-vs-actions)
+  - [Filters](#filters)   
 - [API Reference](#api-reference)
   - [Middleware](#middleware)
   - [Actions (Run/RunAsync)](#actions)
@@ -46,45 +47,55 @@ services.AddPipelines(pipelines =>
     {
         builder
             .UseFilters() // this call may not be necessary in future versions.
-            // .UseNewScope() // establishes a new DI scope for onward steps in the pipeline that use DI -not shown here.
-            // "UseXYZ" adds "Middleware" (runs before and after next steps)
+           
+            // "Use" = "Middleware" (runs before and after next steps)
             .Use(next => async ctx => {
-                Console.WriteLine("Starting order processing...");
-                // var orderMetrics = ctx.ServiceProvider.GetRequiredService<IOrderMetrics>(); // but should use a middleware class for this instead to have deps injected.
-                // await orderService.Started();
+                Console.WriteLine("Starting order processing...");              
                 await next(ctx);              
                 Console.WriteLine("Order processing complete.");
             })
-            // "RunXYZ" adds an "Action" - is the business end of the logic you want to execute.
+
+            // "Run" == "Action" - the business end of some logic you want to execute as a step.
             .RunAsync(async ctx => {
                 await Task.Delay(100); // Simulate work
                 Console.WriteLine("Processing order...");
-            })
-            .WithIdempotency(opt => { // "WithXYZ" adds a "Filter" - this one is  an out of the box filter. Runs before and after the step above and can optionally skip it (see below).
-                opt.Key = "order-123";
-                opt.CheckCompleted = async ctx => {
-                    await Task.Delay(10); // Simulate check
-                    return false; // Not yet processed
-                };
-            })
-            // Conditional branch for payment processing
-            .UseBranch(
-                async ctx => {
-                    Console.WriteLine("Checking if payment needed...");
-                    return true; // Simulate payment required
-                },
-                branch => branch // we are building another pipeline as a branch here..
-                    .RunAsync(async ctx => {
+            })         
+                // "With" = "Filter" - this one is an out of the box filter. Runs before and after the step above and can optionally skip it (see below).
+               .WithSkipCondition(() => false)
+               .WithSkipConditionAsync(() => Task.FromResult(false))
+               .WithSkipConditionAsync((ctx) =>CheckIsFeatureDisabledAsync()) //If any skip conditions return true, step will be skipped.
+
+               .WithIdempotency(opt => { // Another out of the box filter. Skips the step if something causes the step to re-execute and CheckCompleted returns true. Useful if add a retry middleware or Filter that causes re-execution.
+                   opt.Key = "order-123";
+                   opt.CheckCompleted = async ctx => {
+                       await Task.Delay(10); // Simulate check
+                       return false; // Not yet processed
+                   };
+               })
+            // Conditional branch for a more complex payment processing flow fetaure.
+            .UseBranch((branch) =>
+            {
+                // We are building a sub-pipeline here.
+                branch.RunAsync(async ctx => {
                         await Task.Delay(50);
                         Console.WriteLine("Processing payment...");
-                    })
-            )
-            // Parallel notification branches
+                       })
+                          .WithSkipCondition(() => false);                      
+
+            })
+                // We can still use Filters on the branch step itself.
+               .WithSkipConditionAsync(async ctx => {
+                   Console.WriteLine("Checking if payment processing is disabled...");
+                   return IsPaymentProcessingDisabled(ctx);                  
+               }) 
+           
+            // Parallel branches - to spawn off multiple parallel processing branches.
             .UseParallelBranches(
                 new[] { "Customer", "Warehouse", "Shipping" },
-                (branch, recipient) => branch // we are building another pipeline as a branch here..
+                (branch, recipient) => branch // We are building a sub-pipeline here.. per branch.
                     .Run(() => Console.WriteLine($"Sending notification to {recipient}"))
-            );
+            )
+               .WithSkipConditionAsync(IsNotificationsFeatureDisabled);
     });
 });
 
@@ -96,7 +107,7 @@ await pipeline.Run(); // pass optional cancellation token.
 // Output:
 // Starting order processing...
 // Processing order...
-// Checking if payment needed...
+// Checking if payment processing is disabled...
 // Processing payment...
 // Sending notification to Customer
 // Sending notification to Warehouse
@@ -112,7 +123,8 @@ Key goals of this library are to:
 
 1. Allow you write a processing pipeline where its easier to visualise the steps, like a workflow.  
 1. Allow you to capture cross cutting concerns as `Inspector`'s (see below), `Middleware` and `Filter`'s that can be added on the fly, or written as re-usable classes if they are more broadly useful.
-1. Provide a set of broadly useful `Inspector` `Middleware` and `Filter`'s that can be used out of the box.` to add standard and tested behviours for things like:-    - Timeouts
+1. Provide a set of broadly useful `Inspector` `Middleware` and `Filter`'s that can be used out of the box.` to add standard and tested behviours for things like:-
+    - Timeouts
     - Idempotency
     - Retries (using Polly Policies)
     - Logging

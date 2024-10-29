@@ -10,13 +10,13 @@ using Xunit.Categories;
 public class SkipConditionTests
 {
     private IServiceProvider? _serviceProvider;
-    private readonly TestExecutionLogger _testExecutionLogger;  
+    private readonly TestExecutionLogger _testExecutionLogger;
 
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0021:Use expression body for constructor", Justification = "<Pending>")]
     public SkipConditionTests(ITestOutputHelper testOutputHelper)
     {
-        TestOutputHelper = testOutputHelper;       
+        TestOutputHelper = testOutputHelper;
         _testExecutionLogger = new TestExecutionLogger(testOutputHelper);
 
     }
@@ -164,25 +164,53 @@ public class SkipConditionTests
     [Fact]
     public async Task SkipCondition_SupportsChainingMultipleConditions()
     {
-           
-
         // Act
-        var builder = CreatePipelineBuilder()          
+        var builder = CreatePipelineBuilder()
             .Run(_testExecutionLogger.WriteCurrentStepIdToLog, "A")
                 .WithSkipCondition(() => false)
+
             .Run(_testExecutionLogger.WriteCurrentStepIdToLog, "B")
                 .WithSkipCondition(() => false)
                 .WithSkipConditionAsync(() => Task.FromResult(false))
+                //.WithSkipConditionAsync((ctx) =>CheckShouldBeSkippedAsync())
+
             .Run(_testExecutionLogger.WriteCurrentStepIdToLog, "C")
                 .WithSkipCondition(() => true)
+
             .Run(_testExecutionLogger.WriteCurrentStepIdToLog, "D")
                 .WithSkipCondition(() => false)
-                .WithSkipCondition(() => true);
+                .WithSkipCondition(() => true)
+
+            .UseBranch((branch) =>
+            {
+                branch.Run(_testExecutionLogger.WriteCurrentStepIdToLog, "E.1")
+                    .WithSkipCondition(() => false)
+                    .WithSkipCondition(() => true); // THIS NEVER RUNS BECAUSE THIS WHOLE BRANCH IS SKIPPED AS PER THE SKIP ON UseBranch ITSELF
+
+            }, "E")
+                .WithSkipCondition(() => false)
+                .WithSkipCondition(() => true)
+
+            .UseBranch((branch) =>
+            {
+                branch.Run(_testExecutionLogger.WriteCurrentStepIdToLog, "F.1")
+                    .WithSkipCondition(() => false)
+                    .WithSkipCondition(() => true);
+
+                branch.Run(_testExecutionLogger.WriteCurrentStepIdToLog, "F.2")
+                   .WithSkipCondition(() => false)
+                   .WithSkipCondition(() => false);
+
+                branch.Run(_testExecutionLogger.WriteCurrentStepIdToLog, "F.3");   // no skip condition.             
+
+            }, "F")
+                .WithSkipCondition(() => false)
+                .WithSkipCondition(() => false);
 
         var pipeline = builder.Build();
         await pipeline.Run(default);
 
-        _testExecutionLogger.AssertLogsEqual(["A", "B"]);           
+        _testExecutionLogger.AssertLogsEqual(["A", "B", "F.2", "F.3"]);
     }
 
 }

@@ -7,11 +7,15 @@ public class Pipeline
     private readonly PipelineStep _pipeline;
     private readonly IServiceProvider _serviceProvider;
     private readonly IReadOnlyList<IPipelineInspector> _inspectors;
-    internal Pipeline(PipelineStep pipeline, IServiceProvider serviceProvider, IReadOnlyList<IPipelineInspector> inspectors)
+
+    internal Dictionary<Type, object> ExtensionState { get; }
+
+    internal Pipeline(PipelineStep pipeline, IServiceProvider serviceProvider, IReadOnlyList<IPipelineInspector> inspectors, Dictionary<Type, object> extensionState)
     {
         _pipeline = pipeline;
         _serviceProvider = serviceProvider;
         _inspectors = inspectors;
+        ExtensionState = extensionState;
     }
 
     public Task Run(CancellationToken cancellationToken = default)
@@ -37,7 +41,7 @@ public class Pipeline
         // Transfer inspectors from parent pipeline
         foreach (var inspector in _inspectors)
         {
-            branchBuilder.AddInspector(inspector);
+            branchBuilder.AddInspector(inspector);           
         }
 
         configure(branchBuilder);

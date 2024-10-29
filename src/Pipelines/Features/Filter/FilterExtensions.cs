@@ -6,7 +6,7 @@ public static class FilterExtensions
 { 
 
     /// <summary>
-    /// Adds filter support to the pipeline. This extension must be called exactly once per pipeline,
+    /// Adds filter support to the pipeline. This extension must be called exactly once in the root pipeline,
     /// before any filter-specific extensions like WithIdempotency().
     /// </summary>
     /// <remarks>
@@ -19,21 +19,13 @@ public static class FilterExtensions
     ///     .Use(...)
     ///     .WithIdempotency(...) // this is an extensions method that gets, and adds a filter to FilterRegistry.
     /// </code>
-    /// </example>
-    /// <exception cref="InvalidOperationException">Thrown if UseFilters() has already been called on this pipeline.</exception></exception>
+    /// </example>   
     /// <param name="builder">The pipeline builder</param>
     /// <returns>The pipeline builder for chaining</returns>
     public static PipelineBuilder UseFilters(this PipelineBuilder builder)
-    {
-        if (builder.HasExtensionState<FilterRegistry>())
-        {
-            throw new InvalidOperationException("UseFilters() has already been called on this pipeline.");
-        }
-
-        // The inspector itself can be resolved from DI
-        var registry = new FilterRegistry();
-        builder.SetExtensionState(registry);
-        builder.AddInspector(sp=> new FilterExecutionInspector(registry));    
+    {      
+        var inspector = new FilterExecutionInspector();      
+        builder.AddInspector(inspector);    
         return builder;
     }
 

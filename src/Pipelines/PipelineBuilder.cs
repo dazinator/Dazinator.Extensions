@@ -26,6 +26,11 @@ public class PipelineBuilder
     public PipelineBuilder AddInspector(IPipelineInspector inspector)
     {
         _inspectors.Add(inspector);
+        // Handle initialization if supported
+        if (inspector is IInspectorInitialization init)
+        {
+            init.Initialize(this);
+        }
         return this;
     }
 
@@ -150,7 +155,7 @@ public class PipelineBuilder
             pipeline = component(Services, pipeline);
         }
 
-        return new Pipeline(pipeline, Services, _inspectors.ToList());
+        return new Pipeline(pipeline, Services, _inspectors.ToList(), _extensionState);
 
     }
 
