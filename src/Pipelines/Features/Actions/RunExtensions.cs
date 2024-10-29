@@ -4,51 +4,51 @@ namespace Dazinator.Extensions.Pipelines;
 public static class RunExtensions
 {
 
-    public static PipelineBuilder Run(this PipelineBuilder builder, Action action, string? stepId = null)
+    public static IPipelineBuilder Run(this IPipelineBuilder builder, Action action, string? stepId = null)
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             action();
             await next(context);
-        }, stepId, nameof(Run));
+        }, stepId);
         return builder;
     }
 
 
-    public static PipelineBuilder Run(this PipelineBuilder builder, Action<PipelineContext> action, string? stepId = null)
+    public static IPipelineBuilder Run(this IPipelineBuilder builder, Action<PipelineContext> action, string? stepId = null)
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             action(context);
             await next(context);
-        }, stepId, nameof(Run));
+        }, stepId);
         return builder;
     }
 
-    public static PipelineBuilder RunAsync(this PipelineBuilder builder, Func<Task> action, string? stepId = null)
+    public static IPipelineBuilder RunAsync(this IPipelineBuilder builder, Func<Task> action, string? stepId = null)
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             await action();
             await next(context);
-        }, stepId, nameof(RunAsync));
+        }, stepId);
         return builder;
     }
 
 
-    public static PipelineBuilder RunAsync(this PipelineBuilder builder, Func<PipelineContext, Task> action, string? stepId = null)
+    public static IPipelineBuilder RunAsync(this IPipelineBuilder builder, Func<PipelineContext, Task> action, string? stepId = null)
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             await action(context);
             await next(context);
-        }, stepId, nameof(RunAsync));
+        }, stepId);
         return builder;
     }
 
-    public static PipelineBuilder TryRun(this PipelineBuilder builder, Action action, Action<Exception>? onError = null, string? stepId = null)
+    public static IPipelineBuilder TryRun(this IPipelineBuilder builder, Action action, Action<Exception>? onError = null, string? stepId = null)
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             try
             {
@@ -60,14 +60,14 @@ public static class RunExtensions
             }
 
             await next(context);
-        }, stepId, nameof(TryRun));
+        }, stepId);
         return builder;
     }
 
 
-    public static PipelineBuilder TryRun(this PipelineBuilder builder, Action<PipelineContext> action, Action<Exception>? onError = null, string? stepId = null)
+    public static IPipelineBuilder TryRun(this IPipelineBuilder builder, Action<PipelineContext> action, Action<Exception>? onError = null, string? stepId = null)
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             try
             {
@@ -78,13 +78,13 @@ public static class RunExtensions
                 onError?.Invoke(ex);
             }
             await next(context);
-        }, stepId, nameof(TryRun));
+        }, stepId);
         return builder;
     }
 
-    public static PipelineBuilder TryRunAsync(this PipelineBuilder builder, Func<PipelineContext, Task> action, Action<Exception>? onError = null, string? stepId = null)
+    public static IPipelineBuilder TryRunAsync(this IPipelineBuilder builder, Func<PipelineContext, Task> action, Action<Exception>? onError = null, string? stepId = null)
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             try
             {
@@ -95,7 +95,7 @@ public static class RunExtensions
                 onError?.Invoke(ex);
             }
             await next(context);
-        }, stepId, nameof(TryRunAsync));
+        }, stepId);
         return builder;
     }
 

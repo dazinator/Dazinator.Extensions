@@ -5,7 +5,30 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
-public class PipelineBuilder
+public interface IPipelineBuilder
+{
+    // Core builder functionality
+    Pipeline Build();   
+    /// <summary>
+    /// Adds a middleware step to the pipeline.
+    /// </summary>
+    /// <param name="middleware"></param>
+    /// <param name="stepId"></param>
+    /// <returns></returns>
+    IPipelineBuilder Use(Func<PipelineStep, PipelineStep> middleware, string? stepId = null);
+    // Extension state management
+    T? GetExtensionState<T>() where T : class;
+    void SetExtensionState<T>(T state) where T : class;
+    bool HasExtensionState<T>() where T : class;
+    // Inspector management
+    IPipelineBuilder AddInspector(IPipelineInspector inspector);
+    IPipelineBuilder AddInspector<T>() where T : IPipelineInspector;
+    int CurrentStepIndex { get; }
+    // Access to services
+    IServiceProvider ServiceProvider { get; }
+}
+
+public class PipelineBuilder : IPipelineBuilder
 {
     private readonly List<Func<IServiceProvider, PipelineStep, PipelineStep>> _components = new();
 
@@ -17,13 +40,13 @@ public class PipelineBuilder
 
     private bool _isBuilt = false;
 
-    public IServiceProvider Services { get; init; }
+    public IServiceProvider ServiceProvider { get; init; }
     public PipelineBuilder(IServiceProvider rootProvider)
     {
-        Services = rootProvider;
+        ServiceProvider = rootProvider;
     }
 
-    public PipelineBuilder AddInspector(IPipelineInspector inspector)
+    public IPipelineBuilder AddInspector(IPipelineInspector inspector)
     {
         _inspectors.Add(inspector);
         // Handle initialization if supported
@@ -34,13 +57,13 @@ public class PipelineBuilder
         return this;
     }
 
-    public PipelineBuilder AddInspector<T>() where T : IPipelineInspector
+    public IPipelineBuilder AddInspector<T>() where T : IPipelineInspector
     {
         _inspectorTypes.Add(typeof(T));
         return this;
     }
 
-    public PipelineBuilder AddInspector(Func<IServiceProvider, IPipelineInspector> factory)
+    public IPipelineBuilder AddInspector(Func<IServiceProvider, IPipelineInspector> factory)
     {
         _inspectorFactories.Add(factory);
         return this;
@@ -104,9 +127,9 @@ public class PipelineBuilder
 
     private static string GetStepId(string? stepId) => stepId ?? "Anonymous";
 
-    internal int CurrentStepIndex => _components.Count - 1;
+    public int CurrentStepIndex => _components.Count - 1;
 
-    public void Add(Func<PipelineStep, PipelineStep> item, string? stepId, [CallerMemberName] string? stepTypeName = null)
+    private void Add(Func<PipelineStep, PipelineStep> item, string? stepId, [CallerMemberName] string? stepTypeName = null)
     {
         var index = CurrentStepIndex + 1;  // Gets the next index which is captured below, as the index of the step after its added.
         AddComponent((sp, next) =>
@@ -129,7 +152,7 @@ public class PipelineBuilder
     /// <param name="middleware"></param>
     /// <param name="stepId"></param>
     /// <returns></returns>
-    public PipelineBuilder Use(Func<PipelineStep, PipelineStep> middleware, string? stepId = null)
+    public IPipelineBuilder Use(Func<PipelineStep, PipelineStep> middleware, string? stepId = null)
     {
         Add(middleware,
          stepId,
@@ -146,16 +169,16 @@ public class PipelineBuilder
         }
 
         _isBuilt = true;
-        ResolveInspectors(Services);
+        ResolveInspectors(ServiceProvider);
 
         PipelineStep pipeline = _ => Task.CompletedTask;
 
         foreach (var component in _components.AsEnumerable().Reverse())
         {
-            pipeline = component(Services, pipeline);
+            pipeline = component(ServiceProvider, pipeline);
         }
 
-        return new Pipeline(pipeline, Services, _inspectors.ToList(), _extensionState);
+        return new Pipeline(pipeline, ServiceProvider, _inspectors.ToList(), _extensionState);
 
     }
 
@@ -181,18 +204,18 @@ public class PipelineBuilder
     }
 
     #region Extension State
-    internal void SetExtensionState<T>(T state) where T : class
+    public void SetExtensionState<T>(T state) where T : class
     {
         _extensionState[typeof(T)] = state;
     }
 
-    internal T? GetExtensionState<T>() where T : class
+    public T? GetExtensionState<T>() where T : class
     {
         return _extensionState.TryGetValue(typeof(T), out var state) ? state as T : null;
     }
 
     // Optional: method to check if state exists
-    internal bool HasExtensionState<T>() where T : class
+    public bool HasExtensionState<T>() where T : class
     {
         return _extensionState.ContainsKey(typeof(T));
     }

@@ -22,7 +22,7 @@ public static class FilterExtensions
     /// </example>   
     /// <param name="builder">The pipeline builder</param>
     /// <returns>The pipeline builder for chaining</returns>
-    public static PipelineBuilder UseFilters(this PipelineBuilder builder)
+    public static IPipelineBuilder UseFilters(this IPipelineBuilder builder)
     {      
         var inspector = new FilterExecutionInspector();      
         builder.AddInspector(inspector);    
@@ -36,8 +36,8 @@ public static class FilterExtensions
     /// <param name="addFilter"></param>
     /// <returns></returns>
     /// <exception cref="InvalidOperationException"></exception>
-    public static PipelineBuilder AddFilters(
-      this PipelineBuilder builder,
+    public static IPipelineBuilder AddFilters(
+      this IPipelineBuilder builder,
       Action<FilterRegistry> addFilter)
     {
         var registry = builder.GetExtensionState<FilterRegistry>() ??

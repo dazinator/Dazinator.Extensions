@@ -23,11 +23,8 @@ public class SkipConditionTests
 
     public ITestOutputHelper TestOutputHelper { get; }
 
-    public Func<object> GetNextId { get; }
 
-    public Action WriteNextIdToOutput { get; set; }
-
-    private PipelineBuilder CreatePipelineBuilder(IServiceCollection? configureServices = null)
+    private IPipelineBuilder CreatePipelineBuilder(IServiceCollection? configureServices = null)
     {
         configureServices ??= new ServiceCollection();
         //var services = new ServiceCollection();

@@ -1,5 +1,6 @@
-namespace Dazinator.Extensions.Pipelines.Inspector;
+namespace Dazinator.Extensions.Pipelines.Features.Inspector;
 using System.Threading.Tasks;
+using Dazinator.Extensions.Pipelines;
 using Microsoft.Extensions.Logging;
 
 public class LoggingPipelineInspector : IPipelineInspector

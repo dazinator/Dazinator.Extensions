@@ -1,4 +1,4 @@
-namespace Dazinator.Extensions.Pipelines.Inspector;
+namespace Dazinator.Extensions.Pipelines.Features.Inspector;
 using System.Threading.Tasks;
 
 public class TimingPipelineInspector : IPipelineInspector

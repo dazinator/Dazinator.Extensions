@@ -7,8 +7,8 @@ using System.Threading.Tasks;
 // Or perhaps more descriptive:
 public static class SkipFilterExtensions
 {
-    public static PipelineBuilder WithSkipCondition(
-      this PipelineBuilder builder,
+    public static IPipelineBuilder WithSkipCondition(
+      this IPipelineBuilder builder,
       bool shouldSkip)
     {
         return builder.AddFilters(registry =>
@@ -18,8 +18,8 @@ public static class SkipFilterExtensions
         });
     }
 
-    public static PipelineBuilder WithSkipCondition(
-       this PipelineBuilder builder,
+    public static IPipelineBuilder WithSkipCondition(
+       this IPipelineBuilder builder,
        Func<bool> shouldSkip)
     {
         return builder.AddFilters(registry =>
@@ -30,8 +30,8 @@ public static class SkipFilterExtensions
     }
 
 
-    public static PipelineBuilder WithSkipCondition(
-        this PipelineBuilder builder,
+    public static IPipelineBuilder WithSkipCondition(
+        this IPipelineBuilder builder,
         Func<PipelineContext, bool> shouldSkip)
     {
         return builder.AddFilters(registry =>
@@ -41,8 +41,8 @@ public static class SkipFilterExtensions
         });
     }
 
-    public static PipelineBuilder WithSkipConditionAsync(
-        this PipelineBuilder builder,
+    public static IPipelineBuilder WithSkipConditionAsync(
+        this IPipelineBuilder builder,
         Func<Task<bool>> shouldSkip)
     {
         return builder.AddFilters(registry =>
@@ -51,8 +51,8 @@ public static class SkipFilterExtensions
         });
     }
 
-    public static PipelineBuilder WithSkipConditionAsync(
-        this PipelineBuilder builder,
+    public static IPipelineBuilder WithSkipConditionAsync(
+        this IPipelineBuilder builder,
         Func<PipelineContext, Task<bool>> shouldSkip)
     {
         return builder.AddFilters(registry =>
@@ -61,8 +61,8 @@ public static class SkipFilterExtensions
         });
     }
 
-    public static PipelineBuilder WithTrySkipConditionAsync(
-       this PipelineBuilder builder,
+    public static IPipelineBuilder WithTrySkipConditionAsync(
+       this IPipelineBuilder builder,
        Func<PipelineContext, Task<bool>> condition,
        Action<Exception>? onError = null)
     {
@@ -72,8 +72,8 @@ public static class SkipFilterExtensions
         });
     }
 
-    public static PipelineBuilder WithSkipCondition(
-        this PipelineBuilder builder,
+    public static IPipelineBuilder WithSkipCondition(
+        this IPipelineBuilder builder,
         Func<PipelineContext, bool> shouldSkip,
         Action<Exception>? onError = null)
     {

@@ -6,9 +6,9 @@ using Microsoft.Extensions.DependencyInjection;
 
 public static class NewScopeExtensions
 {
-    public static PipelineBuilder UseNewScope(this PipelineBuilder builder, string? stepId = null)
+    public static IPipelineBuilder UseNewScope(this IPipelineBuilder builder, string? stepId = null)
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             await using var scope = context.ServiceProvider.CreateAsyncScope();
             var original = context.ServiceProvider;
@@ -27,7 +27,7 @@ public static class NewScopeExtensions
             {
                 context.ServiceProvider = original;
             }
-        }, stepId, nameof(UseNewScope));
+        }, stepId);
         return builder;
     }
 }

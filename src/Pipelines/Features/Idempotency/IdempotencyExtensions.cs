@@ -8,8 +8,8 @@ using Microsoft.Extensions.DependencyInjection;
 
 public static class IdempotencyExtensions
 {
-    public static PipelineBuilder WithIdempotency(
-         this PipelineBuilder builder,
+    public static IPipelineBuilder WithIdempotency(
+         this IPipelineBuilder builder,
          string key,
          Func<PipelineContext, Task<bool>>? checkCompleted = null)
     {
@@ -24,8 +24,8 @@ public static class IdempotencyExtensions
     }
 
 
-    public static PipelineBuilder WithIdempotency(
-        this PipelineBuilder builder,
+    public static IPipelineBuilder WithIdempotency(
+        this IPipelineBuilder builder,
         Action<IdempotencyOptions> configure)
     {
         var options = new IdempotencyOptions();

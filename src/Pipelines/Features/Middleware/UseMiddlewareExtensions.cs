@@ -13,16 +13,15 @@ public static class UseMiddlewareExtensions
     /// <param name="builder"></param>
     /// <param name="stepId"></param>
     /// <returns></returns>
-    public static PipelineBuilder UseMiddleware<TMiddleware>(this PipelineBuilder builder, string? stepId = null)
+    public static IPipelineBuilder UseMiddleware<TMiddleware>(this IPipelineBuilder builder, string? stepId = null)
         where TMiddleware : IPipelineMiddleware
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             var middleware = context.ServiceProvider.GetRequiredService<TMiddleware>();
             await middleware.ExecuteAsync(next, context);
         },
-        stepId ?? typeof(TMiddleware).Name,
-        typeof(TMiddleware).Name);
+        stepId ?? typeof(TMiddleware).Name);
 
         return builder;
     }
@@ -30,16 +29,15 @@ public static class UseMiddlewareExtensions
 
 #if NET8_0
     // New method that supports keyed middleware
-    public static PipelineBuilder UseMiddleware<TMiddleware>(this PipelineBuilder builder, string key, string? stepId = null)
+    public static IPipelineBuilder UseMiddleware<TMiddleware>(this IPipelineBuilder builder, string key, string? stepId = null)
         where TMiddleware : IPipelineMiddleware
     {
-        builder.Add(next => async context =>
+        builder.Use(next => async context =>
         {
             var middleware = context.ServiceProvider.GetRequiredKeyedService<TMiddleware>(key);
             await middleware.ExecuteAsync(next, context);
         },
-       stepId ?? typeof(TMiddleware).Name,
-       typeof(TMiddleware).Name);
+       stepId ?? typeof(TMiddleware).Name);
 
         return builder;
     }
