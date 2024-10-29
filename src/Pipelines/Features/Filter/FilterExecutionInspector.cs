@@ -10,7 +10,7 @@ public class FilterExecutionInspector : IPipelineInspector, IInspectorInitializa
         // This means we can be executing right now in multiple pipelines / branches, and running concurrently
         // - we always use the right registry for the current pipeline based on the context argument.
 
-        var registry = context.PipelineContext.GetExtensionState<FilterRegistry>();
+        var registry = context.PipelineContext.GetExtensionState<FilterRegistry>();       
         var filters = registry.GetFilters(context.ServiceProvider, context.PipelineContext.CurrentStepIndex);
         foreach (var filter in filters)
         {
@@ -30,6 +30,10 @@ public class FilterExecutionInspector : IPipelineInspector, IInspectorInitializa
         // - we always use the right registry for the current pipeline based on the context argument.
 
         var registry = context.PipelineContext.GetExtensionState<FilterRegistry>();
+        if(registry is null)
+        {
+            throw new ArgumentNullException(nameof(registry));
+        }
         var filters = registry.GetFilters(context.ServiceProvider, context.PipelineContext.CurrentStepIndex);
         // Execute After steps in reverse order
         // this models the behaviour of middleware in terms of the first filter to run, is the "outer" one, meaning it should also be the last to complete.

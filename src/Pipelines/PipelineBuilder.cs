@@ -5,30 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 
-public interface IPipelineBuilder
-{
-    // Core builder functionality
-    Pipeline Build();   
-    /// <summary>
-    /// Adds a middleware step to the pipeline.
-    /// </summary>
-    /// <param name="middleware"></param>
-    /// <param name="stepId"></param>
-    /// <returns></returns>
-    IPipelineBuilder Use(Func<PipelineStep, PipelineStep> middleware, string? stepId = null);
-    // Extension state management
-    T? GetExtensionState<T>() where T : class;
-    void SetExtensionState<T>(T state) where T : class;
-    bool HasExtensionState<T>() where T : class;
-    // Inspector management
-    IPipelineBuilder AddInspector(IPipelineInspector inspector);
-    IPipelineBuilder AddInspector<T>() where T : IPipelineInspector;
-    int CurrentStepIndex { get; }
-    // Access to services
-    IServiceProvider ServiceProvider { get; }
-}
-
-public class PipelineBuilder : IPipelineBuilder
+public class PipelineBuilder : IPipelineBuilder 
 {
     private readonly List<Func<IServiceProvider, PipelineStep, PipelineStep>> _components = new();
 
@@ -129,7 +106,7 @@ public class PipelineBuilder : IPipelineBuilder
 
     public int CurrentStepIndex => _components.Count - 1;
 
-    private void Add(Func<PipelineStep, PipelineStep> item, string? stepId, [CallerMemberName] string? stepTypeName = null)
+    private void Add(Func<PipelineStep, PipelineStep> item, string? stepId, string stepTypeName)
     {
         var index = CurrentStepIndex + 1;  // Gets the next index which is captured below, as the index of the step after its added.
         AddComponent((sp, next) =>
@@ -152,11 +129,11 @@ public class PipelineBuilder : IPipelineBuilder
     /// <param name="middleware"></param>
     /// <param name="stepId"></param>
     /// <returns></returns>
-    public IPipelineBuilder Use(Func<PipelineStep, PipelineStep> middleware, string? stepId = null)
+    public IPipelineBuilder Use(Func<PipelineStep, PipelineStep> middleware, string? stepId = null, [CallerMemberName] string? stepTypeName = null)
     {
         Add(middleware,
          stepId,
-       nameof(Use));
+       stepTypeName ?? nameof(Use));
         return this;
     }
 

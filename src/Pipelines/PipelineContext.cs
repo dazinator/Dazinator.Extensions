@@ -6,7 +6,7 @@ public class PipelineContext
     private readonly Dictionary<int, Dictionary<Type, object>> _stepState = new();
     internal int CurrentStepIndex { get; set; }
 
-    internal string CurrentStepId { get; set; }
+    internal string CurrentStepId { get; set; } = string.Empty;
 
     internal void SetStepState<T>(T state) where T : class
     {
@@ -30,13 +30,13 @@ public class PipelineContext
 
     internal IStepStateAccessor StepState => new StepStateAccessor(this);
 
-    internal T? GetExtensionState<T>() where T : class
+    internal T GetExtensionState<T>() where T : class
     {
-        if (ParentPipeline.ExtensionState.TryGetValue(typeof(T), out var state))
+        if (ParentPipeline.ExtensionState[typeof(T)] is not T result)
         {
-            return state as T;
+            throw new InvalidOperationException($"Extension state of type {typeof(T).Name} was not found.");
         }
-        return null;
+        return result;
     }
 
     public PipelineContext(IServiceProvider serviceProvider, CancellationToken cancellationToken, Pipeline parentPipeline)

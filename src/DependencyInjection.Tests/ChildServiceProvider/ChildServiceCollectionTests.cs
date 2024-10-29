@@ -197,7 +197,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.Child
 
             foreach (var item in parentServiceCollection)
             {
-                Assert.True(sut.Contains(item));
+                Assert.Contains(item, sut);
             }
 
             Assert.Equal(childServices.Count(), sut.GetChildServiceDescriptors().Count());
@@ -521,7 +521,7 @@ namespace Dazinator.Extensions.DependencyInjection.Tests.Child
 
     public class AnimalService
     {
-        public string SomeProperty { get; set; }
+        public string? SomeProperty { get; set; }
     }
 
     public class LionService : AnimalService

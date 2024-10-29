@@ -54,7 +54,8 @@ public class Pipeline
     /// <param name="context"></param>
     /// <returns></returns>
     public async Task RunBranch(PipelineContext parentContext, Action<PipelineBuilder> configure)
-    {
+    {     
+
         var branch = CreateBranch(configure);
         var branchContext = parentContext.CreateBranchContext(branch); // we give each branch a clean context, because we don't want them to share state esepcially parallel scenarios.
         await branch.Run(branchContext);

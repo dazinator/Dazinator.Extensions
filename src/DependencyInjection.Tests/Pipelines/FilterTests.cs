@@ -5,6 +5,7 @@ using Xunit.Categories;
 using Xunit;
 using Dazinator.Extensions.Pipelines;
 using Dazinator.Extensions.Pipelines.Features.Filter;
+using System.Collections.Concurrent;
 
 [UnitTest]
 public class FilterTests
@@ -223,3 +224,4 @@ public class FilterTests
         public Task AfterStepAsync(PipelineStepContext context) => Task.CompletedTask;
     }
 }
+
