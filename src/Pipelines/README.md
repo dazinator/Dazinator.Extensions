@@ -586,39 +586,59 @@ Note: all api's that can spawn multiple branches (not just WithChunks), allow yo
 The default is 1, so no concurrency unless exlicitly setting the options in this way.
 
 
-Exmple of using a skip condition on a parallel branch and within a parallel branch 
+A more advanced example
 
-```
-
+      ```csharp
         var builder = CreatePipelineBuilder()
-            .UseBranchPerInputs<string>(branch =>
+            // STEP 1
+            .Run(()=>Console.WriteLine("Starting.."))
+           
+            // STEP 2 - Define a branch in the flow, per string input (see Inputs below)
+            .UseBranchPerInput<string>(branch =>
             {
-                branch.Run(async () => TestOutputHelper.WriteLine($"Processing orders {string.Join(",", branch.Input.ToArray())}")); // got the chunk of items
-                branch.Run(async () => TestOutputHelper.WriteLine($"Some other task"));
-            }, "process-order-ids")
-             .WithChunks(
-                new[] { "1", "2", "3", "4", "5" },
-                chunkSize: 2, (options) =>
-                {
-                    options.MaxDegreeOfParallelism = 2;
-                })
-             .WithSkipConditionAsync((ctx) => Task.FromResult(true)) // skip process-order-ids as feature disabled.
-           .Run(()=>TestOutputHelper.WriteLine("About to run notifications"))
-           .UseBranchPerInput<string>(branch =>
-           {
-               branch.Run(() => TestOutputHelper.WriteLine($"Logging email addresses for {branch.Input} notifications.."))
-                       .WithSkipCondition(() => branch.Input != "Email") // we skip logging email addresses for non email notifications.
+                // Add the branch steps..
+                // Branch STEP 2.1
+                branch.Run(() => Console.WriteLine($"Processing order {branch.Input}.."))  // " e.g "Processing order 1.."               
 
-                     .Run(() => TestOutputHelper.WriteLine($"Send {branch.Input} notifications.."))
+                // Branch SSTEP 2.2
+                     .Run(async () => await ProcessOrder(branch.Input))
+                         .WithSkipCondition(() => IsOrderCancelled(branch.Input)) // we skip this step for cancelled orders.
+                      
+            })
+               .WithInputs(new[] { "1", "2", "3", "4", "5" }, // data items as input to above branches - can come from an async function - specified here for simplicity.
+                          (options) =>
+                          {
+                              options.MaxDegreeOfParallelism = 2; // max 2 branches will execute a time.
+                          })            
+               .WithSkipConditionAsync((ctx) => Task.FromResult(true)) // Skip STEP 2 completely - i.e step 2 won't run and therefore will any of its branches.
+            // STEP 3 - Log
+           .Run(()=>TestOutputHelper.WriteLine("About to allocate inventory"))
+
+           // STEP 4 - Define a branch in the execution flow, per INPUTS not INPUT (note plurality), note WithChunks is used to pass max 50 items at a time passed as Input to each branch..
+           .UseBranchPerInputs<OrderAllocation>(branch =>
+           {
+               // STEP 4.1
+               branch.Run(async ()=> await AdjustStockLevelsNow(branch.Input)) // An array containing the chunk of OrderAllocation's provided below
+                       .WithSkipCondition(() => branch.Input < 10) // we skip asjusting stock levels now if we have a lot of adjustments to make because.. yeah thats why.
+
+               // STEP 4.2
+                     .Run(async ()=> await AdjustStockLevelsLater(branch.Input)) // An array containing the chunk of OrderAllocation's provided below
+                       .WithSkipCondition(() => branch.Input >= 10) // we have a large transaction - lets offload to a background job beacause.. I love skip conditions.
+
+               // STEP 4.3
+                     .Run(() => Console.WriteLine($"Processed {branch.Input.Count} allocations.."))
                       
            })
-            .WithInputs(
-                new[] { "Email", "Web" },
-                chunkSize: 2, (options) =>
+            .WithChunks(
+                async ()=> LoadAllocations()),
+                chunkSize: 50, (options) =>
                 {
                     options.MaxDegreeOfParallelism = 2;
-                })           
+                })    
+             // STEP 5       
             .Run(() => TestOutputHelper.WriteLine("Finished"));
+
+```
 
 ```
 
