@@ -588,15 +588,15 @@ The default is 1, so no concurrency unless exlicitly setting the options in this
 
 A more advanced example
 
-      ```csharp
+```csharp
         var builder = CreatePipelineBuilder()
             // STEP 1
             .Run(()=>Console.WriteLine("Starting.."))
            
             // STEP 2 - Define a branch in the flow, per string input (see Inputs below)
             .UseBranchPerInput<string>(branch =>
-            {
-                // Add the branch steps..
+            {               
+                
                 // Branch STEP 2.1
                 branch.Run(() => Console.WriteLine($"Processing order {branch.Input}.."))  // " e.g "Processing order 1.."               
 
@@ -611,7 +611,8 @@ A more advanced example
                               options.MaxDegreeOfParallelism = 2; // max 2 branches will execute a time.
                           })            
                .WithSkipConditionAsync((ctx) => Task.FromResult(true)) // Skip STEP 2 completely - i.e step 2 won't run and therefore will any of its branches.
-            // STEP 3 - Log
+           
+           // STEP 3 - Log
            .Run(()=>TestOutputHelper.WriteLine("About to allocate inventory"))
 
            // STEP 4 - Define a branch in the execution flow, per INPUTS not INPUT (note plurality), note WithChunks is used to pass max 50 items at a time passed as Input to each branch..
@@ -635,10 +636,9 @@ A more advanced example
                 {
                     options.MaxDegreeOfParallelism = 2;
                 })    
-             // STEP 5       
-            .Run(() => TestOutputHelper.WriteLine("Finished"));
-
-```
+           
+           // STEP 5       
+           .Run(() => TestOutputHelper.WriteLine("Finished"));
 
 ```
 
