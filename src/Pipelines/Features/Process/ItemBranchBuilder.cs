@@ -13,9 +13,9 @@ public class ItemBranchBuilder<TItem>: IPipelineBuilder
     internal ItemBranchBuilder(IPipelineBuilder inner, TItem item)
     {
         _builder = inner;
-        Item = item;
+        Input = item;
     }
-    public TItem Item { get; }     
+    public TItem Input { get; }     
 
     // Implement IPipelineBuilder by delegating to inner builder
     public Pipeline Build() => _builder.Build();

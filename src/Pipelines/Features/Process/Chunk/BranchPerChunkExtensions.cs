@@ -4,7 +4,7 @@ namespace Dazinator.Extensions.Pipelines;
 using Dazinator.Extensions.Pipelines.Features.Process;
 using Dazinator.Extensions.Pipelines.Features.Process.Chunk;
 
-public static class ChunkExtensions
+public static class BranchPerChunkExtensions
 {   
     public static IPipelineBuilder WithChunks<T>(
         this IAwaitingItemsSource<T> builder,
@@ -15,9 +15,9 @@ public static class ChunkExtensions
         var options = new ParallelOptions();
         configureOptions?.Invoke(options);
 
-        return ((PipelineBuilder)builder).AddFilters(registry =>
+        return (builder).AddFilters(registry =>
         {
-            registry.AddFilter(sp => new RunPerChunkFilter<T>(items, chunkSize, options));
+            registry.AddFilter(sp => new BranchPerChunkFilter<T>(items, chunkSize, options));
         });
     }
 }

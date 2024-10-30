@@ -470,6 +470,8 @@ builder
 ```
 
 ### Branching
+
+#### Single Branch
 Create sub-pipelines for complex workflows:
 
 ```csharp
@@ -509,33 +511,115 @@ builder
    );
 ```
 
-### Parallel Execution
-Execute multiple pipelines concurrently:
+#### Multiple Branches
+
+You can spawn multiple branches, with concurrency controls.
+
+Branch per item:
 
 ```csharp
-builder.UseParallelBranches(
-   new[] { "Region1", "Region2", "Region3" },
-   (branch, region) => branch
-       .UseNewScope()  // Each branch gets its own scope
-       .Run(() => Console.WriteLine($"Starting {region}"))
-       .TryRunAsync(
-           async ctx => 
-           {
-               await Task.Delay(100, ctx.CancellationToken);
-               if (region == "Region2") throw new Exception("Region2 failed");
-               Console.WriteLine($"Completed {region}");
-           },
-           ex => Console.WriteLine($"Region failed: {ex.Message}")
-       )
-);
+ var processedItems = new ConcurrentBag<string>();
 
-// Output might be:
-// Starting Region1
-// Starting Region2
-// Starting Region3
-// Region failed: Region2 failed
-// Completed Region1
-// Completed Region3
+ // Act
+ var builder = CreatePipelineBuilder()
+     .UseBranchPerInput<string>(branch =>
+     {
+         branch.Run(() => processedItems.Add(branch.Input));
+     })
+     .WithInputs(new[] { "item1", "item2", "item3" });
+
+ var pipeline = builder.Build();
+ await pipeline.Run();
+
+ // Assert
+ Assert.Equal(3, processedItems.Count);
+ Assert.Contains("item1", processedItems);
+ Assert.Contains("item2", processedItems);
+ Assert.Contains("item3", processedItems);
+```
+
+Branch per chunk of items:
+
+```csharp
+ // Arrange
+ var processedChunks = new ConcurrentBag<string[]>();
+
+ // Act
+ var builder = CreatePipelineBuilder()
+     .UseBranchPerInputs<string>(branch =>
+     {
+         branch.Run(() => processedChunks.Add(branch.Input.ToArray())); // branch.Input here is the "chunk" of items assigned to this branch.
+     })
+     .WithChunks(
+         new[] { "1", "2", "3", "4", "5" },
+         chunkSize: 2);
+
+ var pipeline = builder.Build();
+ await pipeline.Run();
+
+ // Assert
+ Assert.Equal(3, processedChunks.Count); // 2 chunks of 2, 1 chunk of 1
+ Assert.Contains(processedChunks, chunk => chunk.SequenceEqual(new[] { "1", "2" }));
+ Assert.Contains(processedChunks, chunk => chunk.SequenceEqual(new[] { "3", "4" }));
+ Assert.Contains(processedChunks, chunk => chunk.SequenceEqual(new[] { "5" }));
+
+```
+
+Controlling concurrency:
+
+```csharp
+ // Act
+        var builder = CreatePipelineBuilder()
+            .UseBranchPerInputs<string>(branch =>
+            {
+                branch.Run(() => processedChunks.Add(branch.Input.ToArray()));
+            })
+            .WithChunks(
+                new[] { "1", "2", "3", "4", "5" },
+                chunkSize: 2, (options) => {
+                    options.MaxDegreeOfParallelism = 2;                  
+                });
+
+```
+
+Note: all api's that can spawn multiple branches (not just WithChunks), allow you to control the degree of parallelism in the same way. 
+The default is 1, so no concurrency unless exlicitly setting the options in this way.
+
+
+Exmple of using a skip condition on a parallel branch and within a parallel branch 
+
+```
+
+        var builder = CreatePipelineBuilder()
+            .UseBranchPerInputs<string>(branch =>
+            {
+                branch.Run(async () => TestOutputHelper.WriteLine($"Processing orders {string.Join(",", branch.Input.ToArray())}")); // got the chunk of items
+                branch.Run(async () => TestOutputHelper.WriteLine($"Some other task"));
+            }, "process-order-ids")
+             .WithChunks(
+                new[] { "1", "2", "3", "4", "5" },
+                chunkSize: 2, (options) =>
+                {
+                    options.MaxDegreeOfParallelism = 2;
+                })
+             .WithSkipConditionAsync((ctx) => Task.FromResult(true)) // skip process-order-ids as feature disabled.
+           .Run(()=>TestOutputHelper.WriteLine("About to run notifications"))
+           .UseBranchPerInput<string>(branch =>
+           {
+               branch.Run(() => TestOutputHelper.WriteLine($"Logging email addresses for {branch.Input} notifications.."))
+                       .WithSkipCondition(() => branch.Input != "Email") // we skip logging email addresses for non email notifications.
+
+                     .Run(() => TestOutputHelper.WriteLine($"Send {branch.Input} notifications.."))
+                      
+           })
+            .WithInputs(
+                new[] { "Email", "Web" },
+                chunkSize: 2, (options) =>
+                {
+                    options.MaxDegreeOfParallelism = 2;
+                })           
+            .Run(() => TestOutputHelper.WriteLine("Finished"));
+
 ```
 
 ### Pipeline Inspection
@@ -761,7 +845,7 @@ These IDs appear in your inspector contexts, making it easy to:
 - 🔍 Use inspectors for centralized error tracking
 
 ### Performance
-- 🚀 Run independent operations in parallel using `UseParallelBranches`
+- 🚀 Run independent operations in parallel using branches per input and driving input from Chunks or Individual items etc - setting concurrency options as needed.
 - ⏱️ Use performance inspectors to identify bottlenecks
 - 🎯 Keep middleware focused and lightweight
 

@@ -4,9 +4,9 @@ namespace Dazinator.Extensions.Pipelines;
 using Dazinator.Extensions.Pipelines.Features.Process;
 using Dazinator.Extensions.Pipelines.Features.Process.PerItem;
 
-public static class ItemExtensions
+public static class BranchPerItemFilterExtensions
 {
-    public static IPipelineBuilder WithItems<T>(
+    public static IPipelineBuilder WithInputs<T>(
       this IAwaitingItemSource<T> builder,
       IEnumerable<T> items,
       Action<ParallelOptions>? configureOptions = null)
@@ -16,7 +16,7 @@ public static class ItemExtensions
 
         return (builder).AddFilters(registry =>
         {
-            registry.AddFilter(sp => new RunPerItemFilter<T>(items, options));
+            registry.AddFilter(sp => new BranchPerItemFilter<T>(items, options));
         });
     }
 }

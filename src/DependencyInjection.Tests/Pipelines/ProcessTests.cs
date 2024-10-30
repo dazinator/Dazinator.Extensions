@@ -5,18 +5,17 @@ using Xunit.Categories;
 using Xunit;
 using Dazinator.Extensions.Pipelines;
 using System.Collections.Concurrent;
-using Dazinator.Extensions.Pipelines.Features.Process.PerItem;
-using Microsoft.VisualStudio.TestPlatform.Utilities;
-using Dazinator.Extensions.Pipelines.Features.Inspector;
 using Microsoft.Extensions.Logging;
 using Dazinator.Extensions.DependencyInjection;
 using Dazinator.Extensions.Pipelines.Features.Diagnostics;
-using Autofac.Core;
+using Dazinator.Extensions.Pipelines.Features.Skip;
 
 [UnitTest]
 public class ProcessTests
 {
     private IServiceProvider? _serviceProvider;
+
+    public ConcurrencyMonitorInspector? ConcurrencyInspector { get; private set; }
 
     public ProcessTests(ITestOutputHelper testOutputHelper)
     {
@@ -34,9 +33,10 @@ public class ProcessTests
         });
 
         _serviceProvider = services.BuildServiceProvider();
+        this.ConcurrencyInspector = _serviceProvider.GetRequiredService<ConcurrencyMonitorInspector>();
         return new PipelineBuilder(_serviceProvider)
             .UseFilters()
-            .AddInspector<ConcurrencyMonitorInspector>();
+            .AddInspector(this.ConcurrencyInspector);
     }
 
     [Fact]
@@ -47,21 +47,21 @@ public class ProcessTests
 
         // Act
         var builder = CreatePipelineBuilder()
-            .ProcessItem<string>(branch =>
+            .UseBranchPerInput<string>(branch =>
             {
                 branch.Run(() =>
                 {
 
-                    processedItems.Add(branch.Item);
+                    processedItems.Add(branch.Input);
                 });
             })
-            .WithItems(new[] { "item1" });
+            .WithInputs(new[] { "item1" });
 
         var pipeline = builder.Build();
         await pipeline.Run();
 
         // Assert
-        Assert.Equal(1, processedItems.Count);
+        Assert.Single(processedItems);
         Assert.Contains("item1", processedItems);
         //Assert.Contains("item2", processedItems);
         //Assert.Contains("item3", processedItems);
@@ -75,11 +75,11 @@ public class ProcessTests
 
         // Act
         var builder = CreatePipelineBuilder()
-            .ProcessItem<string>(branch =>
+            .UseBranchPerInput<string>(branch =>
             {
-                branch.Run(() => processedItems.Add(branch.Item));
+                branch.Run(() => processedItems.Add(branch.Input));
             })
-            .WithItems(new[] { "item1", "item2", "item3" });
+            .WithInputs(new[] { "item1", "item2", "item3" });
 
         var pipeline = builder.Build();
         await pipeline.Run();
@@ -90,6 +90,7 @@ public class ProcessTests
         Assert.Contains("item2", processedItems);
         Assert.Contains("item3", processedItems);
     }
+
     [Fact]
     public async Task ProcessItem_RespectsParallelOptions()
     {
@@ -98,81 +99,70 @@ public class ProcessTests
         var maxConcurrentExecutions = 0;
         var processedItems = new ConcurrentBag<string>();
         var semaphore = new SemaphoreSlim(1, 1);
-        var services = new ServiceCollection().AddLogging((b) =>
-        b.AddXUnit(TestOutputHelper));      
+        var enableDiagnostics = false; // Flag to enable/disable diagnostic logging
 
-        var executionTimeline = new ConcurrentDictionary<string, List<string>>();      
-        // var concurrencyMonitor = new ConcurrencyMonitorInspector(_serviceProvider.GetRequiredService);
+        var services = new ServiceCollection().AddLogging(b =>
+            b.AddXUnit(TestOutputHelper));
 
         // Act
-        var builder = CreatePipelineBuilder(services);     
+        var builder = CreatePipelineBuilder(services);
         builder
-            .ProcessItem<string>(branch =>
+            .UseBranchPerInput<string>(branch =>
             {
                 branch.Run(async () =>
                 {
-                    var item = branch.Item;
-                    var threadId = Environment.CurrentManagedThreadId;
-                    var timeline = new List<string>();
-                    executionTimeline[item] = timeline;
-
                     try
                     {
+                        // Track concurrent executions
                         await semaphore.WaitAsync();
-                        concurrentExecutions = Interlocked.Increment(ref concurrentExecutions);
-                        maxConcurrentExecutions = Math.Max(maxConcurrentExecutions, concurrentExecutions);
-                        timeline.Add($"Start {item} - Time: {DateTime.Now:mm:ss.fff} - Concurrent: {concurrentExecutions}");
-                        TestOutputHelper.WriteLine($"Start {item} - Time: {DateTime.Now:mm:ss.fff} - Thread: {threadId} - Concurrent: {concurrentExecutions}");
+                        var current = Interlocked.Increment(ref concurrentExecutions);
+                        maxConcurrentExecutions = Math.Max(maxConcurrentExecutions, current);
+
+                        if (enableDiagnostics)
+                        {
+                            TestOutputHelper.WriteLine($"Start {branch.Input} - Concurrent: {current}");
+                        }
+
                         semaphore.Release();
 
-                        // Track that we're still executing
-                        timeline.Add($"Delay start {item} - Time: {DateTime.Now:mm:ss.fff}");
                         await Task.Delay(100); // Simulate work
-                        timeline.Add($"Delay end {item} - Time: {DateTime.Now:mm:ss.fff}");
 
                         await semaphore.WaitAsync();
-                        processedItems.Add(item);
-                        concurrentExecutions = Interlocked.Decrement(ref concurrentExecutions);
-                        timeline.Add($"End {item} - Time: {DateTime.Now:mm:ss.fff} - Concurrent: {concurrentExecutions}");
-                        TestOutputHelper.WriteLine($"End {item} - Time: {DateTime.Now:mm:ss.fff} - Thread: {threadId} - Concurrent: {concurrentExecutions}");
+                        processedItems.Add(branch.Input);
+                        Interlocked.Decrement(ref concurrentExecutions);
+
+                        if (enableDiagnostics)
+                        {
+                            TestOutputHelper.WriteLine($"End {branch.Input} - Concurrent: {current - 1}");
+                        }
+
                         semaphore.Release();
                     }
-                    catch (Exception ex)
+                    catch when (enableDiagnostics)
                     {
-                        timeline.Add($"Error {item}: {ex.Message}");
                         throw;
                     }
-                }, "B");
-            }, "A")
-            .WithItems(
+                }, "ProcessItem");
+            })
+            .WithInputs(
                 new[] { "item1", "item2", "item3", "item4", "item5" },
                 options => options.MaxDegreeOfParallelism = 2);
 
-        var pipeline = builder.Build();
-        await pipeline.Run();
-
-        var concurrencyMonitorInspector = pipeline.FindInspector<ConcurrencyMonitorInspector>();
-        // Get the concurrency report
-        var report = concurrencyMonitorInspector?.GenerateReport();
-        TestOutputHelper.WriteLine(report?.ToString());
-
-
-        // Print timeline
-        TestOutputHelper.WriteLine("\nExecution Timeline:");
-        foreach (var entry in executionTimeline.OrderBy(e => e.Key))
-        {
-            TestOutputHelper.WriteLine($"\n{entry.Key}:");
-            foreach (var event_ in entry.Value)
-            {
-                TestOutputHelper.WriteLine($"  {event_}");
-            }
-        }
+        await builder.Build().Run();
 
         // Assert
-        TestOutputHelper.WriteLine($"\nMax concurrency: {maxConcurrentExecutions}");
+        if (enableDiagnostics)
+        {
+            TestOutputHelper.WriteLine($"Max concurrency: {maxConcurrentExecutions}");
+
+            var report = ConcurrencyInspector?.GenerateReport();
+            TestOutputHelper.WriteLine(report?.ToString());
+        }
+
         Assert.Equal(2, maxConcurrentExecutions);
         Assert.Equal(5, processedItems.Count);
     }
+   
 
     [Fact]
     public async Task ProcessItems_ProcessesChunks()
@@ -182,9 +172,9 @@ public class ProcessTests
 
         // Act
         var builder = CreatePipelineBuilder()
-            .ProcessItems<string>(branch =>
+            .UseBranchPerInputs<string>(branch =>
             {
-                branch.Run(() => processedChunks.Add(branch.Items.ToArray()));
+                branch.Run(() => processedChunks.Add(branch.Input.ToArray()));
             })
             .WithChunks(
                 new[] { "1", "2", "3", "4", "5" },
@@ -200,6 +190,79 @@ public class ProcessTests
         Assert.Contains(processedChunks, chunk => chunk.SequenceEqual(new[] { "5" }));
     }
 
+    [Documentation]
+    [Fact]
+    public async Task ProcessItems_ProcessesChunks_WithConcurrencyControl()
+    {
+        // Arrange
+        var processedChunks = new ConcurrentBag<string[]>();
+
+        // Act
+        var builder = CreatePipelineBuilder()
+            .UseBranchPerInputs<string>(branch =>
+            {
+                branch.Run(() => processedChunks.Add(branch.Input.ToArray()));
+            })
+            .WithChunks(
+                new[] { "1", "2", "3", "4", "5" },
+                chunkSize: 2, (options) => {
+                    options.MaxDegreeOfParallelism = 2;                  
+                });
+
+        var pipeline = builder.Build();
+        await pipeline.Run();
+
+        // Assert
+        Assert.Equal(3, processedChunks.Count); // 2 chunks of 2, 1 chunk of 1
+        Assert.Contains(processedChunks, chunk => chunk.SequenceEqual(new[] { "1", "2" }));
+        Assert.Contains(processedChunks, chunk => chunk.SequenceEqual(new[] { "3", "4" }));
+        Assert.Contains(processedChunks, chunk => chunk.SequenceEqual(new[] { "5" }));
+    }
+
+    [Documentation]
+    [Fact]
+    public async Task ProcessItems_ProcessesChunks_WithConcurrencyControlAndFilters_Docs()
+    {       
+
+        // Act
+        var builder = CreatePipelineBuilder()
+            .UseBranchPerInputs<string>(branch =>
+            {
+                branch.Run(async () => TestOutputHelper.WriteLine($"Processing orders {string.Join(",", branch.Input.ToArray())}")); // got the chunk of items
+                branch.Run(async () => TestOutputHelper.WriteLine($"Some other task"));
+            }, "process-order-ids")
+             .WithChunks(
+                new[] { "1", "2", "3", "4", "5" },
+                chunkSize: 2, (options) =>
+                {
+                    options.MaxDegreeOfParallelism = 2;
+                })
+             .WithSkipConditionAsync((ctx) => Task.FromResult(true)) // skip process-order-ids as feature disabled.
+           .Run(()=>TestOutputHelper.WriteLine("About to run notifications"))
+           .UseBranchPerInput<string>(branch =>
+           {
+               branch.Run(() => TestOutputHelper.WriteLine($"Logging email addresses for {branch.Input} notifications.."))
+                       .WithSkipCondition(() => branch.Input != "Email") // we skip logging email addresses for non email notifications.
+
+                     .Run(() => TestOutputHelper.WriteLine($"Send {branch.Input} notifications.."))
+                      
+           })
+            .WithInputs(
+                new[] { "Email", "Web" },
+                chunkSize: 2, (options) =>
+                {
+                    options.MaxDegreeOfParallelism = 2;
+                })           
+            .Run(() => TestOutputHelper.WriteLine("Finished"));
+
+
+
+
+        var pipeline = builder.Build();
+        await pipeline.Run();
+      
+    }
+
     [Fact]
     public async Task ProcessItems_RespectsParallelOptions()
     {
@@ -211,7 +274,7 @@ public class ProcessTests
 
         // Act
         var builder = CreatePipelineBuilder()
-            .ProcessItems<string>(branch =>
+            .UseBranchPerInputs<string>(branch =>
             {
                 branch.Run(async () =>
                 {
@@ -222,7 +285,7 @@ public class ProcessTests
                     }
 
                     await Task.Delay(50); // Simulate work
-                    processedChunks.Add(branch.Items.ToArray());
+                    processedChunks.Add(branch.Input.ToArray());
 
                     lock (syncLock)
                     {
@@ -248,15 +311,17 @@ public class ProcessTests
     {
         // Arrange
         var builder = CreatePipelineBuilder()
-            .ProcessItem<string>(branch =>
+            .UseBranchPerInput<string>(branch =>
             {
                 branch.Run(() =>
                 {
-                    if (branch.Item == "item2")
+                    if (branch.Input == "item2")
+                    {
                         throw new InvalidOperationException("Test exception");
+                    }
                 });
             })
-            .WithItems(new[] { "item1", "item2", "item3" });
+            .WithInputs(new[] { "item1", "item2", "item3" });
 
         var pipeline = builder.Build();
 
@@ -270,7 +335,7 @@ public class ProcessTests
         // Arrange
         var executed = false;
         var builder = CreatePipelineBuilder()
-            .ProcessItems<string>(branch =>
+            .UseBranchPerInputs<string>(branch =>
             {
                 branch.Run(() => executed = true);
             })
@@ -360,7 +425,6 @@ public class ProcessTests
         // Arrange
         const int maxConcurrency = 2;
         const int totalItems = 10;
-        const int delayMs = 100;
 
         var items = Enumerable.Range(1, totalItems).ToList();
         var processedItems = new ConcurrentBag<int>();

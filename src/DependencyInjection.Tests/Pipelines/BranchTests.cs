@@ -1,8 +1,6 @@
 namespace Tests.Pipelines;
 
-using System.Collections.Concurrent;
 using Dazinator.Extensions.Pipelines;
-using Tests.Pipelines.Utils;
 using Xunit.Abstractions;
 using Xunit.Categories;
 
@@ -82,31 +80,6 @@ public class BranchTests
             "BranchStep2",
             "MainStep2"
         }, _executionOrder);
-    }
-
-    [Fact]
-    public async Task ParallelBranches_ExecuteAllBranches()
-    {
-        // Arrange
-        var items = new[] { "Item1", "Item2", "Item3" };
-        var executedItems = new ConcurrentBag<string>();
-
-        // Act
-        var builder = CreatePipelineBuilder()
-            .UseParallelBranches(
-                items,
-                (branch, item) => branch
-                    .Run(() => executedItems.Add(item)));
-
-        var pipeline = builder.Build();
-        await pipeline.Run();
-
-        // Assert
-        Assert.Equal(items.Length, executedItems.Count);
-        foreach (var item in items)
-        {
-            Assert.Contains(item, executedItems);
-        }
-    }
+    } 
 
 }

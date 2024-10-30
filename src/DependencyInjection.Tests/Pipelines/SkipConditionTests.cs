@@ -127,7 +127,7 @@ public class SkipConditionTests
                     executionOrder.Add("Nested Pipeline End");
                 });
             })
-                .WithSkipCondition(shouldSkip)
+              .WithSkipCondition(shouldSkip)
             .Use(next => async context =>
             {
                 executionOrder.Add("After Nested Pipeline");

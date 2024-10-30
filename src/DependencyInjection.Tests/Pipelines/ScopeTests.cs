@@ -28,13 +28,13 @@ public class ScopeTests
 
     public Action WriteNextIdToOutput { get; set; }
 
-    private PipelineBuilder CreatePipelineBuilder(IServiceCollection? configureServices = null)
+    private IPipelineBuilder CreatePipelineBuilder(IServiceCollection? configureServices = null)
     {
         configureServices ??= new ServiceCollection();
         //var services = new ServiceCollection();
         //  configureServices?.Invoke(services);
         _serviceProvider = configureServices.BuildServiceProvider();
-        return new PipelineBuilder(_serviceProvider);
+        return new PipelineBuilder(_serviceProvider).UseFilters();
     }
 
     private class ScopedTestMiddleware : IPipelineMiddleware
@@ -76,22 +76,21 @@ public class ScopeTests
                 executionOrder.Add("After root scope");
             })
             .UseNewScope()
-            .UseParallelBranches(
-                new[] { "Branch1", "Branch2" },
-                (branch, branchName) =>
+            .UseBranchPerInput<string>(
+                (branch) =>
                 {
-                    executionOrder.Add($"Configuring {branchName}");
+                    executionOrder.Add($"Configuring {branch.Input}");
                     branch
                         .Use(next => async ct =>
                         {
-                            executionOrder.Add($"Before {branchName} scope");
+                            executionOrder.Add($"Before {branch.Input} scope");
                             await next(ct);
-                            executionOrder.Add($"After {branchName} scope");
+                            executionOrder.Add($"After {branch.Input} scope");
                         })
                         .UseNewScope()
                         .UseMiddleware<ScopedTestMiddleware>();
                 }
-            );
+            ).WithInputs(new[] { "Branch1", "Branch2" });
 
         var pipeline = builder.Build();
         await pipeline.Run(default);

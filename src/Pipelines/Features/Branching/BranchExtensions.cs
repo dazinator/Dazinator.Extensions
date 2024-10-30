@@ -17,32 +17,8 @@ public static class BranchExtensions
             await context.ParentPipeline.RunBranch(context, configureBranch);          
             await next(context);       
         }, stepId);
-        return builder;
-       
-    }
-   
-
-    // Parallel branches don't need conditions, they're simpler now
-    public static IPipelineBuilder UseParallelBranches<T>(
-     this IPipelineBuilder builder,
-     IEnumerable<T> items,
-     Action<IPipelineBuilder, T> configureBranch,
-     string? stepId = null)
-    {
-        builder.Use(next => async context =>
-        {
-            var tasks = items.Select(item =>
-            {
-                return context.ParentPipeline.RunBranch(
-                    context,
-                    branch => configureBranch(branch, item));
-            });
-
-            await Task.WhenAll(tasks);
-            await next(context);
-        }, stepId);
-        return builder;
-    }
+        return builder;       
+    }     
 }
 
 

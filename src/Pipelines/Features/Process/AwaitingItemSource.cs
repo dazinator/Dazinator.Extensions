@@ -17,7 +17,7 @@ public class AwaitingItemSource<TItem> : IPipelineBuilder, IAwaitingItemSource<T
     }
 
     // Implement IPipelineBuilder by delegating to inner builder
-    public Pipeline Build() => _builder.Build();   
+    public Pipeline Build() => _builder.Build();
     public T? GetExtensionState<T>() where T : class
         => _builder.GetExtensionState<T>();
     public void SetExtensionState<T>(T state) where T : class
@@ -32,5 +32,5 @@ public class AwaitingItemSource<TItem> : IPipelineBuilder, IAwaitingItemSource<T
 
     public IServiceProvider ServiceProvider => _builder.ServiceProvider;
 
-    public int CurrentStepIndex { get; }
+    public int CurrentStepIndex => _builder.CurrentStepIndex;
 }
