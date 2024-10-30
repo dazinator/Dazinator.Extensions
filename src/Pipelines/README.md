@@ -77,10 +77,10 @@ services.AddPipelines(pipelines =>
             {
                 // We are building a sub-pipeline here.
                 branch.RunAsync(async ctx => {
-                        await Task.Delay(50);
-                        Console.WriteLine("Processing payment...");
+                          await Task.Delay(50);
+                          Console.WriteLine("Processing payment...");
                        })
-                          .WithSkipCondition(() => false);                      
+                         .WithSkipCondition(() => false);                      
 
             })
                 // We can still use Filters on the branch step itself.
@@ -95,7 +95,7 @@ services.AddPipelines(pipelines =>
                 (branch, recipient) => branch // We are building a sub-pipeline here.. per branch.
                     .Run(() => Console.WriteLine($"Sending notification to {recipient}"))
             )
-               .WithSkipConditionAsync(IsNotificationsFeatureDisabled);
+              .WithSkipConditionAsync(IsNotificationsFeatureDisabled);
     });
 });
 
