@@ -1,4 +1,4 @@
-﻿namespace Tests.Pipelines;
+namespace Tests.Pipelines;
 
 using Dazinator.Extensions.Pipelines;
 using Tests.Pipelines.Utils;
@@ -53,7 +53,7 @@ public class RunActionsTests
 
         // Act
         var builder = CreatePipelineBuilder()
-            .RunAsync(async () =>
+            .Run(async () =>
             {              
                 await TestExecutionLogger.WriteToLogAsync("Ran");              
             });
@@ -86,7 +86,7 @@ public class RunActionsTests
     }
 
     [Fact]
-    public async Task TryRunAsync_HandlesException_AndContinuesPipeline()
+    public async Task TryRun_Async_HandlesException_AndContinuesPipeline()
     {
         // Arrange
         var exceptionHandled = false;
@@ -94,7 +94,7 @@ public class RunActionsTests
 
         // Act
         var builder = CreatePipelineBuilder()
-            .TryRunAsync(
+            .TryRun(
                 async ctx =>
                 {
                     await Task.Delay(1, ctx.CancellationToken);
@@ -113,7 +113,7 @@ public class RunActionsTests
     }
 
     [Fact]
-    public async Task RunAsync_CancellationToken_IsRespected()
+    public async Task Run_Async_CancellationToken_IsRespected()
     {
         // Arrange
         var services = new ServiceCollection();
@@ -122,7 +122,7 @@ public class RunActionsTests
 
         // Act
         var builder = CreatePipelineBuilder(services)
-            .RunAsync(async context =>
+            .Run(async context =>
             {
                 try
                 {

@@ -6,15 +6,27 @@ public class Pipeline
 {
     private readonly PipelineStep _pipeline;
     private readonly IServiceProvider _serviceProvider;
-    private readonly IReadOnlyList<IPipelineInspector> _inspectors;
 
     internal Dictionary<Type, object> ExtensionState { get; }
+
+    public IReadOnlyList<IPipelineInspector> Inspectors { get; }
+
+    /// <summary>
+    /// Finds the first inspector based on it's type.
+    /// </summary>
+    /// <typeparam name="TInspectorType"></typeparam>
+    /// <returns></returns>
+    public TInspectorType? FindInspector<TInspectorType>()
+        where TInspectorType: IPipelineInspector
+    {
+        return Inspectors.OfType<TInspectorType>().FirstOrDefault();
+    }
 
     internal Pipeline(PipelineStep pipeline, IServiceProvider serviceProvider, IReadOnlyList<IPipelineInspector> inspectors, Dictionary<Type, object> extensionState)
     {
         _pipeline = pipeline;
         _serviceProvider = serviceProvider;
-        _inspectors = inspectors;
+        Inspectors = inspectors;
         ExtensionState = extensionState;
     }
 
@@ -39,7 +51,7 @@ public class Pipeline
         var branchBuilder = new PipelineBuilder(_serviceProvider);
 
         // Transfer inspectors from parent pipeline
-        foreach (var inspector in _inspectors)
+        foreach (var inspector in Inspectors)
         {
             branchBuilder.AddInspector(inspector);           
         }

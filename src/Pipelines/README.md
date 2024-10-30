@@ -539,7 +539,8 @@ builder.UseParallelBranches(
 ```
 
 ### Pipeline Inspection
-Monitor execution, track timing, and handle errors throughout your pipeline using inspectors.
+Inspectors are notified before and after every step in the pipeline as well as if there is an exception.
+They can be used to do things like monitor execution, track timing, handle errors - or other cross cutting concerns.
 
 #### Basic Inspector Interface
 ```csharp
@@ -560,48 +561,93 @@ public class PipelineStepContext
 }
 ```
 
-#### Example: Logging Inspector
+#### Built-in Inspectors
+Pipeline Builder comes with several built-in inspectors that provide immediate visibility into your pipeline's execution.
+
+##### LoggingPipelineInspector
+Provides a log before and after each step as well as on exceptions, using `Microsoft.Extensions.Logging`.
+
 ```csharp
-public class LoggingInspector : IPipelineInspector
-{
-   private readonly ILogger _logger;
+// Add to your pipeline
+builder.AddInspector<LoggingPipelineInspector>();
 
-   public LoggingInspector(ILogger logger)
-   {
-       _logger = logger;
-   }
-
-   public Task BeforeStepAsync(PipelineStepContext context)
-   {
-       _logger.LogInformation("Starting step: {StepId}", context.StepId);
-       return Task.CompletedTask;
-   }
-
-   public Task AfterStepAsync(PipelineStepContext context)
-   {
-       _logger.LogInformation(
-           "Completed step: {StepId} in {Duration}ms", 
-           context.StepId, 
-           context.Duration.TotalMilliseconds);
-       return Task.CompletedTask;
-   }
-
-   public Task OnExceptionAsync(PipelineStepContext context)
-   {
-       _logger.LogError(
-           context.Exception,
-           "Error in step: {StepId}",
-           context.StepId);
-       return Task.CompletedTask;
-   }
-}
+// Or with custom logger
+var logger = serviceProvider.GetRequiredService<ILogger<LoggingPipelineInspector>>();
+builder.AddInspector(new LoggingPipelineInspector(logger));
 ```
 
-#### Example: Performance Tracking Inspector
+Output example:
+```
+info: Starting pipeline step "ProcessOrder" of type Run
+info: Completed pipeline step "ProcessOrder" after 123.45ms
+error: Pipeline step "ProcessOrder" failed: Operation timed out
+```
+
+Perfect for:
+- Development debugging
+- Production monitoring
+- Understanding pipeline flow
+- Tracking execution times
+
+##### ConcurrencyMonitorInspector
+Monitors and analyzes concurrent execution patterns in your pipeline, especially useful for parallel processing scenarios.
+
+```csharp
+// Create the inspector
+var concurrencyMonitor = new ConcurrencyMonitorInspector(logger); // Logger is optional
+
+// Add to your pipeline
+builder.AddInspector(concurrencyMonitor);
+
+// After pipeline execution, get the report
+var report = concurrencyMonitor.GenerateReport();
+Console.WriteLine(report.ToString());
+```
+
+The report provides:
+- Maximum concurrent executions per step
+- Current active executions
+- Detailed execution timeline
+- Thread usage patterns
+
+Example output:
+```
+    Concurrency Analysis Report
+    ==========================
+    
+    Step: A
+    Max Concurrent Executions: 1
+    Current Active Executions: 0
+    Total Executions: 1
+    
+    Execution Timeline:
+      Thread 9: Start=23:24:52.497 End=PENDING Concurrent=(Start: 1, End: 0)
+    
+    Step: B
+    Max Concurrent Executions: 2
+    Current Active Executions: 0
+    Total Executions: 2
+    
+    Execution Timeline:
+      Thread 15: Start=23:24:52.506 End=23:24:52.506 Concurrent=(Start: 2, End: 0)
+      Thread 12: Start=23:24:52.506 End=23:24:52.506 Concurrent=(Start: 1, End: 0)
+```
+
+The above report shows a pipeline with a single step `ProcessItems` it reached a max concurrency of `2`, and it ran 5 times in total. The timeline shows each execution a problem because, 
+
+Perfect for:
+- Debugging concurrency issues
+- Verifying parallel execution behavior
+- Performance optimization
+- Understanding thread utilization
+
+#### Example: Writing Custom Inspectors
+
+##### Performance Tracking Inspector
 ```csharp
 public class PerformanceInspector : IPipelineInspector
 {
-   private readonly List _timings = new();
+   private readonly List<(string StepId, TimeSpan Duration)> _timings = new();
 
    public Task BeforeStepAsync(PipelineStepContext context) => Task.CompletedTask;
 
@@ -624,12 +670,17 @@ public class PerformanceInspector : IPipelineInspector
 ```
 
 #### Using Inspectors
+Inspectors can be combined to provide comprehensive monitoring:
+
 ```csharp
 // Create and add inspectors
 var performanceInspector = new PerformanceInspector();
+var concurrencyMonitor = new ConcurrencyMonitorInspector();
+
 var builder = new PipelineBuilder()
-   .AddInspector<LoggingInspector>())
-   .AddInspector(performanceInspector);
+   .AddInspector<LoggingPipelineInspector>()
+   .AddInspector(performanceInspector)
+   .AddInspector(concurrencyMonitor);
 
 // Build your pipeline
 builder
@@ -640,14 +691,32 @@ builder
 // Run the pipeline
 await pipeline.Run();
 
-// Check performance metrics
+// Check metrics
 performanceInspector.PrintReport();
+var concurrencyReport = concurrencyMonitor.GenerateReport();
 
 // Output might be:
 // DB Migration: 1234.56ms
 // Cache Warmup: 567.89ms
 // Final Step: 1.23ms
 ```
+
+#### Best Practices for Inspectors
+
+1. **Development vs Production**
+   - Use detailed logging in development
+   - Consider performance impact in production
+   - Use step IDs for better tracking
+
+2. **Performance Considerations**
+   - Inspectors run for every step
+   - Consider using conditional logging
+   - Be mindful of memory usage in long-running pipelines
+
+3. **Debugging Tips**
+   - Use meaningful step IDs
+   - Combine multiple inspectors for full visibility
+   - Save inspector reports for post-execution analysis
 
 #### Step IDs
 Every step in your pipeline can have an optional ID for tracking:

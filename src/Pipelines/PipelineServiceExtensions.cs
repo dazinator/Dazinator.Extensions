@@ -41,6 +41,7 @@ public class PipelinesServicesBuilder
         Services.TryAddSingleton<PipelineRegistry>();
         return this;
     }
+
 }
 
 

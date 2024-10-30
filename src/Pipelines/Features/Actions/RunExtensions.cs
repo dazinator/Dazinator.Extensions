@@ -25,7 +25,7 @@ public static class RunExtensions
         return builder;
     }
 
-    public static IPipelineBuilder RunAsync(this IPipelineBuilder builder, Func<Task> action, string? stepId = null)
+    public static IPipelineBuilder Run(this IPipelineBuilder builder, Func<Task> action, string? stepId = null)
     {
         builder.Use(next => async context =>
         {
@@ -36,7 +36,7 @@ public static class RunExtensions
     }
 
 
-    public static IPipelineBuilder RunAsync(this IPipelineBuilder builder, Func<PipelineContext, Task> action, string? stepId = null)
+    public static IPipelineBuilder Run(this IPipelineBuilder builder, Func<PipelineContext, Task> action, string? stepId = null)
     {
         builder.Use(next => async context =>
         {
@@ -82,7 +82,7 @@ public static class RunExtensions
         return builder;
     }
 
-    public static IPipelineBuilder TryRunAsync(this IPipelineBuilder builder, Func<PipelineContext, Task> action, Action<Exception>? onError = null, string? stepId = null)
+    public static IPipelineBuilder TryRun(this IPipelineBuilder builder, Func<PipelineContext, Task> action, Action<Exception>? onError = null, string? stepId = null)
     {
         builder.Use(next => async context =>
         {

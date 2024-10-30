@@ -51,6 +51,10 @@ public class PipelineBuilder : IPipelineBuilder
     {
         _components.Add(item);
     }
+    
+    private static string GetStepId(string? stepId) => stepId ?? "Anonymous";
+
+    public int CurrentStepIndex => _components.Count - 1;
 
     private PipelineStep CreateInspectedStep(PipelineStep step, string stepId, string stepType, IServiceProvider sp, int stepIndex, PipelineStep next)
     {
@@ -100,11 +104,6 @@ public class PipelineBuilder : IPipelineBuilder
         };
 #pragma warning restore IDE0022 // Use expression body for method
     }
-
-
-    private static string GetStepId(string? stepId) => stepId ?? "Anonymous";
-
-    public int CurrentStepIndex => _components.Count - 1;
 
     private void Add(Func<PipelineStep, PipelineStep> item, string? stepId, string stepTypeName)
     {
@@ -169,7 +168,7 @@ public class PipelineBuilder : IPipelineBuilder
         // Resolve inspector types
         foreach (var type in _inspectorTypes)
         {
-            var inspector = (IPipelineInspector)ActivatorUtilities.CreateInstance(rootProvider, type);
+            var inspector = (IPipelineInspector)ActivatorUtilities.GetServiceOrCreateInstance(rootProvider, type);
             _inspectors.Add(inspector);
         }
 
