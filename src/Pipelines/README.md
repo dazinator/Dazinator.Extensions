@@ -725,7 +725,7 @@ Example output:
     Total Executions: 1
     
     Execution Timeline:
-      Thread 9: Start=23:24:52.497 End=PENDING Concurrent=(Start: 1, End: 0)
+      Thread 9: Start=23:24:52.497 End=23:24:52.505 Concurrent=(Start: 1, End: 0)
     
     Step: B
     Max Concurrent Executions: 2
