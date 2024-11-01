@@ -725,7 +725,7 @@ Example output:
     Total Executions: 1
     
     Execution Timeline:
-      Thread 9: Start=23:24:52.497 End=PENDING Concurrent=(Start: 1, End: 0)
+      Thread 9: Start=23:24:52.497 End=23:24:52.505 Concurrent=(Start: 1, End: 0)
     
     Step: B
     Max Concurrent Executions: 2
@@ -737,7 +737,8 @@ Example output:
       Thread 12: Start=23:24:52.506 End=23:24:52.506 Concurrent=(Start: 1, End: 0)
 ```
 
-The above report shows a pipeline with a single step `ProcessItems` it reached a max concurrency of `2`, and it ran 5 times in total. The timeline shows each execution a problem because, 
+The above report shows a pipeline with a steps A and B. A was not concurrent. B was concurrent and hit a max concurrency of 2.
+The Execution timeline shows each thread that executed the step, the Thread Id, start and end time, as well as what the concurrency was for the step as the time of start and end.
 
 Perfect for:
 - Debugging concurrency issues
