@@ -1,7 +1,8 @@
-namespace Dazinator.Extensions.Pipelines.Features.Process.Chunk;
+namespace Dazinator.Extensions.Pipelines.Features.Branching.Chunk;
+
+using Dazinator.Extensions.Pipelines.Features.Branching;
 using Dazinator.Extensions.Pipelines.Features.Filter;
 using Dazinator.Extensions.Pipelines.Features.Filter.Utils;
-using Dazinator.Extensions.Pipelines.Features.Process;
 // Define descriptive type aliases
 
 public class BranchPerChunkFilter<T> : IStepFilter
@@ -24,13 +25,14 @@ public class BranchPerChunkFilter<T> : IStepFilter
         _lazyExecutionTask = new Lazy<Func<Action<ItemBranchBuilder<T[]>>, Task>>(() =>
        (configureBranch) =>
        {
+           _options.CancellationToken = context.PipelineContext.CancellationToken;
            var chunks = _items.Chunk(_chunkSize);
            return Parallel.ForEachAsync(chunks, _options, async (item, ct) => await ProcessItem(item, context.PipelineContext, configureBranch));
        });
 
-        var filterCallback = new FilterCallback<Action<ItemBranchBuilder<T[] >>>(_lazyExecutionTask.Value);
-        context.PipelineContext.SetFilterCallback(filterCallback);            
-       
+        var filterCallback = new FilterCallback<Action<ItemBranchBuilder<T[]>>>(_lazyExecutionTask.Value);
+        context.PipelineContext.SetFilterCallback(filterCallback);
+
         return Task.CompletedTask;
     }
 

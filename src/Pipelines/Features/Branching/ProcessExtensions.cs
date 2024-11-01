@@ -3,13 +3,12 @@ namespace Dazinator.Extensions.Pipelines;
 #pragma warning restore IDE0130 // Extensions placed in this namespace for ease of discoverability
 
 using System;
-using System.Threading.Tasks;
+using Dazinator.Extensions.Pipelines.Features.Branching;
 using Dazinator.Extensions.Pipelines.Features.Filter.Utils;
-using Dazinator.Extensions.Pipelines.Features.Process;
 
 
 // Extension methods
-public static class ProcessExtensions
+public static class BranchPerInputExtensions
 {
     /// <summary>
     /// Configures a step to process individual items using a branch per item.
@@ -19,17 +18,14 @@ public static class ProcessExtensions
         Action<ItemBranchBuilder<T>> configureBranch,
         string? stepId = null)
     {
-       // builder.UseMiddleware(new ProcessItemMiddleware<T>(configureBranch), stepId);
+        // builder.UseMiddleware(new ProcessItemMiddleware<T>(configureBranch), stepId);
         builder.Use(next => async context =>
         {
             var filterCallback = context.GetFilterCallback<Action<ItemBranchBuilder<T>>>();
-            if(filterCallback is null)
+            if (filterCallback is null)
             {
                 throw new InvalidOperationException("No filter callback set on context. Did you forget to add WithItems() etc?");
-            }
-             //?? throw new InvalidOperationException("No filter callback set on context. Did you forget to add WithItems() etc?");
-            //var filterCallback = context.GetFilterCallback<Action<ItemBranchBuilder<T>>()
-            // ?? throw new InvalidOperationException("No filter callback set on context. Did you forget to add WithItems() etc?");
+            }          
 
             await filterCallback.ExecuteAsync(configureBranch);
             await next(context);
@@ -60,22 +56,8 @@ public static class ProcessExtensions
             await filterCallback.ExecuteAsync(configureBranch);
             await next(context);
 
-        }, stepId);
-
-        //builder.Use(next => async context =>
-        //{
-        //    var runner = new ItemsRunner<T>(
-        //        context,
-        //        (items, parentContext) => parentContext.ParentPipeline.RunBranch(
-        //            parentContext,
-        //            branch => configureBranch(new ItemsBranchBuilder<T>(branch, items))));
-
-        //    context.SetStepState(runner);
-        //    await next(context);
-        //}, stepId);
+        }, stepId);      
 
         return new AwaitingItemsSource<T>(builder);
     }
-
-
 }

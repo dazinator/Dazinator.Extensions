@@ -1,6 +1,8 @@
 namespace Tests.Pipelines;
 
 using Dazinator.Extensions.Pipelines;
+using Dazinator.Extensions.Pipelines.Features.Branching;
+using Dazinator.Extensions.Pipelines.Features.Branching.PerItem;
 using Xunit.Abstractions;
 using Xunit.Categories;
 

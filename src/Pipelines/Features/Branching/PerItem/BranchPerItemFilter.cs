@@ -1,8 +1,8 @@
-namespace Dazinator.Extensions.Pipelines.Features.Process.PerItem;
+namespace Dazinator.Extensions.Pipelines.Features.Branching.PerItem;
 
+using Dazinator.Extensions.Pipelines.Features.Branching;
 using Dazinator.Extensions.Pipelines.Features.Filter;
 using Dazinator.Extensions.Pipelines.Features.Filter.Utils;
-using Dazinator.Extensions.Pipelines.Features.Process;
 
 // Filters
 public class BranchPerItemFilter<T> : IStepFilter
@@ -23,7 +23,7 @@ public class BranchPerItemFilter<T> : IStepFilter
         _lazyExecutionTask = new Lazy<Func<Action<ItemBranchBuilder<T>>, Task>>(() =>
         (configureBranch) =>
         {
-
+            _options.CancellationToken = context.PipelineContext.CancellationToken;
             return Parallel.ForEachAsync(_items, _options, async (item, ct) => await ProcessItem(item, context.PipelineContext, configureBranch));
 
         });

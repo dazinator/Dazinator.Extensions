@@ -1,20 +1,21 @@
-namespace Dazinator.Extensions.Pipelines.Features.Process;
+namespace Dazinator.Extensions.Pipelines.Features.Branching;
 
-using System;
 using System.Runtime.CompilerServices;
 
 /// <summary>
-/// Decorates the builder for fluent API where are awaiting the caller to provide a source for items to process one per step.
+/// Decorates an existing pipeline builder with an item of type T, allowing the pipeline to be built with the item available to steps.
 /// </summary>
 /// <typeparam name="T"></typeparam>
-public class AwaitingItemSource<TItem> : IPipelineBuilder, IAwaitingItemSource<TItem>
+public class ItemBranchBuilder<TItem> : IPipelineBuilder
 {
     private readonly IPipelineBuilder _builder;
 
-    public AwaitingItemSource(IPipelineBuilder builder)
+    internal ItemBranchBuilder(IPipelineBuilder inner, TItem item)
     {
-        _builder = builder;
+        _builder = inner;
+        Input = item;
     }
+    public TItem Input { get; }
 
     // Implement IPipelineBuilder by delegating to inner builder
     public Pipeline Build() => _builder.Build();
@@ -32,5 +33,6 @@ public class AwaitingItemSource<TItem> : IPipelineBuilder, IAwaitingItemSource<T
 
     public IServiceProvider ServiceProvider => _builder.ServiceProvider;
 
-    public int CurrentStepIndex => _builder.CurrentStepIndex;
+    public int CurrentStepIndex { get; }
+
 }

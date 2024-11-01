@@ -1,0 +1,30 @@
+```mermaid
+sequenceDiagram
+    participant M as Middleware
+    participant F as BranchPerItemFilter
+    participant CB as FilterCallback
+    participant PC as PipelineContext
+    participant P as Pipeline
+
+    Note over F: Construction with items & options
+    
+    rect rgb(200, 220, 255)
+        Note right of F: BeforeStepAsync Phase
+        F->>F: Create lazy execution task
+        F->>CB: Create FilterCallback
+        F->>PC: SetFilterCallback
+    end
+
+    rect rgb(220, 200, 255)
+        Note right of M: Middleware Execution
+        M->>PC: GetFilterCallback
+        M->>CB: ExecuteAsync(configureBranch)
+        activate CB
+        loop For each item (in parallel)
+            CB->>F: ProcessItem
+            F->>P: RunBranch
+            Note over P: Execute branch with item
+        end
+        deactivate CB
+    end
+```

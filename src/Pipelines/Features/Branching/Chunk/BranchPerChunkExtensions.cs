@@ -1,11 +1,11 @@
 #pragma warning disable IDE0130 // for discoverability
-namespace Dazinator.Extensions.Pipelines;
+namespace Dazinator.Extensions.Pipelines.Features.Branching.Chunk;
+
+using Dazinator.Extensions.Pipelines.Features.Branching;
 #pragma warning restore IDE0130 // for discoverability
-using Dazinator.Extensions.Pipelines.Features.Process;
-using Dazinator.Extensions.Pipelines.Features.Process.Chunk;
 
 public static class BranchPerChunkExtensions
-{   
+{
     public static IPipelineBuilder WithChunks<T>(
         this IAwaitingItemsSource<T> builder,
         IEnumerable<T> items,
@@ -15,7 +15,7 @@ public static class BranchPerChunkExtensions
         var options = new ParallelOptions();
         configureOptions?.Invoke(options);
 
-        return (builder).AddFilters(registry =>
+        return builder.AddFilters(registry =>
         {
             registry.AddFilter(sp => new BranchPerChunkFilter<T>(items, chunkSize, options));
         });
