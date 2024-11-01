@@ -1,6 +1,8 @@
 namespace Tests.Pipelines;
 
+using System.CodeDom.Compiler;
 using Dazinator.Extensions.Pipelines;
+using Dazinator.Extensions.Pipelines.Features.Job;
 using Tests.Pipelines.Utils;
 using Xunit.Abstractions;
 using Xunit.Categories;
@@ -8,7 +10,7 @@ using Xunit.Categories;
 [UnitTest]
 public class RunActionsTests
 {
-    private IServiceProvider? _serviceProvider;   
+    private IServiceProvider? _serviceProvider;
 
 
     [System.Diagnostics.CodeAnalysis.SuppressMessage("Style", "IDE0021:Use expression body for constructor", Justification = "<Pending>")]
@@ -33,7 +35,7 @@ public class RunActionsTests
 
     [Fact]
     public async Task Run_ExecutesAction()
-    {       
+    {
 
         // Act
         var builder = CreatePipelineBuilder()
@@ -43,7 +45,7 @@ public class RunActionsTests
         await pipeline.Run(default);
 
         // Assert
-        TestExecutionLogger.AssertWasLogged("Ran");      
+        TestExecutionLogger.AssertWasLogged("Ran");
     }
 
     [Fact]
@@ -54,15 +56,15 @@ public class RunActionsTests
         // Act
         var builder = CreatePipelineBuilder()
             .Run(async () =>
-            {              
-                await TestExecutionLogger.WriteToLogAsync("Ran");              
+            {
+                await TestExecutionLogger.WriteToLogAsync("Ran");
             });
 
         var pipeline = builder.Build();
         await pipeline.Run(default);
 
         // Assert
-        TestExecutionLogger.AssertWasLogged("Ran");      
+        TestExecutionLogger.AssertWasLogged("Ran");
     }
 
     [Fact]
