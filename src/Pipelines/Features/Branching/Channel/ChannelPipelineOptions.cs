@@ -11,6 +11,8 @@ public class ChannelPipelineOptions<T>
     public bool? SingleWriter { get; set; } = false;
     public bool? SingleReader { get; set; } = false;
 
+    public bool AutoCompleteChannel { get; set; } = true;
+
     internal Channel<T> CreateChannel()
     {       
 
