@@ -110,7 +110,6 @@ public static class ChannelPipelineExtensions
                             }
                         });
                 }
-
             }).WithInputs(indexes, opt =>
             {
                 opt.MaxDegreeOfParallelism = indexes.Count();
