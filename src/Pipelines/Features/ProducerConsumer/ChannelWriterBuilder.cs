@@ -1,4 +1,5 @@
-namespace Dazinator.Extensions.Pipelines.Features.Branching.Channel;
+namespace Dazinator.Extensions.Pipelines.Features.ProducerConsumer;
+using Dazinator.Extensions.Pipelines.Features.Branching;
 using System.Threading.Channels;
 
 public class ChannelWriterBuilder<T> : ItemBranchBuilder<ChannelWriter<T>>

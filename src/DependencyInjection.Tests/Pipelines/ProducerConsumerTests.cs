@@ -7,16 +7,18 @@ using Dazinator.Extensions.Pipelines;
 using System.Collections.Concurrent;
 using Dazinator.Extensions.DependencyInjection;
 using Dazinator.Extensions.Pipelines.Features.Diagnostics;
-using System.Threading.Channels;
+using Dazinator.Extensions.Pipelines.Features.Branching;
+using Dazinator.Extensions.Pipelines.Features.Filter.Utils;
+using Xunit.Sdk;
 
 [UnitTest]
-public class ChannelPipelineTests
+public class ProducerConsumerTests
 {
     private readonly ITestOutputHelper _testOutputHelper;
     private IServiceProvider? _serviceProvider;
     public ConcurrencyMonitorInspector? ConcurrencyInspector { get; private set; }
 
-    public ChannelPipelineTests(ITestOutputHelper testOutputHelper)
+    public ProducerConsumerTests(ITestOutputHelper testOutputHelper)
     {
         _testOutputHelper = testOutputHelper;
     }
@@ -33,59 +35,112 @@ public class ChannelPipelineTests
         ConcurrencyInspector = _serviceProvider.GetRequiredService<ConcurrencyMonitorInspector>();
         return new PipelineBuilder(_serviceProvider)
             .UseFilters()
-            .AddInspector(ConcurrencyInspector);
+              .AddInspector(new DiagnosticInspector(_testOutputHelper));
+            //.AddInspector(ConcurrencyInspector);
     }
 
-    //[Fact]
-    //public async Task SingleReaderWriter_ProcessesAllItems()
-    //{
-    //    // Arrange
-    //    var processedItems = new ConcurrentDictionary<int, string>();
-    //    const int itemCount = 100;
+    public class DiagnosticInspector : IPipelineInspector
+    {
+        private readonly ITestOutputHelper _output;
 
-    //    // Act
-    //    var builder = CreatePipelineBuilder()
-    //        .UseChannel<string>(
-    //            reader => {
-    //                reader.Run((ctx) =>
-    //                {
-    //                    var item = ctx.Input;
+        public DiagnosticInspector(ITestOutputHelper output)
+        {
+            _output = output;
+        }
 
-    //                    _testOutputHelper.WriteLine($"Processing item: {item}");
-    //                    var itemNumber = int.Parse(reader.Input.Replace("item", ""));
-    //                    processedItems.TryAdd(itemNumber, reader.Input);
-    //                });
-    //                _testOutputHelper.WriteLine($"Processing item: {reader.Input}");
-    //                var itemNumber = int.Parse(reader.Input.Replace("item", ""));
-    //                processedItems.TryAdd(itemNumber, reader.Input);
-    //            },
-    //            writer => {
-    //                writer.Run(async () => {
-    //                    for (int i = 0; i < itemCount; i++)
-    //                    {
-    //                        var item = $"item{i}";
-    //                        _testOutputHelper.WriteLine($"Writing item: {item}");
-    //                        await writer.Writer.WriteAsync(item);
-    //                    }
-    //                    _testOutputHelper.WriteLine("Completing channel");
-    //                    writer.Writer.Complete();
-    //                });
-    //            },
-    //            options => {
-    //                options.ReaderCount = 1;
-    //                options.WriterCount = 1;
-    //                options.MaxCapacity = 10;
-    //            });
+        public Task BeforeStepAsync(PipelineStepContext context)
+        {
+            _output.WriteLine($"Before Step: {context.StepId} (Index: {context.PipelineContext.CurrentStepIndex})");
+            var boolCallback = context.PipelineContext.GetFilterCallback<Action<ItemBranchBuilder<bool>>>();
+            var intCallback = context.PipelineContext.GetFilterCallback<Action<ItemBranchBuilder<int>>>();
 
-    //    await builder.Build().Run();
+            _output.WriteLine($"  - bool callback: {(boolCallback != null ? "present" : "missing")}");
+            _output.WriteLine($"  - int callback: {(intCallback != null ? "present" : "missing")}");
 
-    //    // Assert
-    //    Assert.Equal(itemCount, processedItems.Count);
-    //    for (int i = 0; i < itemCount; i++)
-    //    {
-    //        Assert.Contains($"item{i}", processedItems.Values);
-    //    }
-    //}
+            // Look through all step states
+            foreach (var state in GetAllStepStates(context.PipelineContext))
+            {
+                _output.WriteLine($"  - Step {state.stepIndex} has callbacks: {string.Join(", ", state.types)}");
+            }
+
+            return Task.CompletedTask;
+        }
+
+        private static IEnumerable<(int stepIndex, IEnumerable<string> types)> GetAllStepStates(PipelineContext context)
+        {
+            // This would need access to _stepState - you might need to add a method to PipelineContext
+            // to expose this information for debugging
+            yield break;
+        }
+
+        public Task AfterStepAsync(PipelineStepContext context)
+        {
+            _output.WriteLine($"After Step: {context.StepId}");
+            return Task.CompletedTask;
+        }
+
+        public Task OnExceptionAsync(PipelineStepContext context)
+        {
+            _output.WriteLine($"Exception in Step: {context.StepId}");
+            _output.WriteLine($"- {context.Exception}");
+            return Task.CompletedTask;
+        }
+    }
+
+
+    [Fact]
+    public async Task SingleReaderWriter_ProcessesAllItems()
+    {
+        // Arrange
+        var processedItems = new ConcurrentDictionary<int, string>();
+        const int itemCount = 100;
+
+        // Act
+        var builder = CreatePipelineBuilder()
+            .UseProducerConsumer<string>(
+                consumer =>
+                {
+                    consumer.UseAsyncStream(consumer.ReadAllAsync);
+                    consumer.Run((ctx) =>
+                    {
+                        var item = ctx.GetCurrentItem<string>();
+
+                        _testOutputHelper.WriteLine($"Processing item: {item}");
+                        var itemNumber = int.Parse(item.Replace("item", ""));
+                        processedItems.TryAdd(itemNumber, item);
+                    });
+                  
+                },
+                writer =>
+                {
+                    writer.Run(async () =>
+                    {
+                        for (int i = 0; i < itemCount; i++)
+                        {
+                            var item = $"item{i}";
+                            _testOutputHelper.WriteLine($"Writing item: {item}");
+                            await writer.Writer.WriteAsync(item);
+                        }
+                        _testOutputHelper.WriteLine("Completing channel");
+                        writer.Writer.Complete();
+                    });
+                },
+                options =>
+                {
+                    options.ReaderCount = 1;
+                    options.WriterCount = 1;
+                    options.MaxCapacity = 10;
+                }, stepId: "TestProducerConsumer" );
+
+        await builder.Build().Run();
+
+        // Assert
+        Assert.Equal(itemCount, processedItems.Count);
+        for (int i = 0; i < itemCount; i++)
+        {
+            Assert.Contains($"item{i}", processedItems.Values);
+        }
+    }
 
     //[Fact]
     //public async Task MultipleReaders_ProcessAllItemsOnce()

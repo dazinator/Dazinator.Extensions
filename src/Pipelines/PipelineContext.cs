@@ -68,4 +68,9 @@ public class PipelineContext
         public void Set<T>(T state) where T : class => _context.SetStepState(state);
         public T? Get<T>() where T : class => _context.GetStepState<T>();
     }
+
+    internal IEnumerable<(int StepIndex, IEnumerable<Type> Types)> GetStepStateInfo()
+    {
+        return _stepState.Select(kvp => (kvp.Key, (IEnumerable<Type>)kvp.Value.Keys));
+    }
 }

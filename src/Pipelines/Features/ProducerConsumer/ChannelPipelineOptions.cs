@@ -1,4 +1,4 @@
-namespace Dazinator.Extensions.Pipelines.Features.Branching.Channel;
+namespace Dazinator.Extensions.Pipelines.Features.ProducerConsumer;
 using System.Threading.Channels;
 
 public class ChannelPipelineOptions<T>
@@ -14,9 +14,9 @@ public class ChannelPipelineOptions<T>
     public bool AutoCompleteChannel { get; set; } = true;
 
     internal Channel<T> CreateChannel()
-    {       
+    {
 
-        if(MaxCapacity is not  null)
+        if (MaxCapacity is not null)
         {
             var options = new BoundedChannelOptions(MaxCapacity ?? int.MaxValue)
             {
@@ -32,7 +32,7 @@ public class ChannelPipelineOptions<T>
         var unboundedOptions = new UnboundedChannelOptions()
         {
             SingleReader = SingleReader ?? ReaderCount == 1,
-            SingleWriter = SingleWriter ?? WriterCount == 1,      
+            SingleWriter = SingleWriter ?? WriterCount == 1,
         };
         return Channel.CreateUnbounded<T>(unboundedOptions);
 

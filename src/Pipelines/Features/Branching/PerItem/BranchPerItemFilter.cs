@@ -1,5 +1,6 @@
 namespace Dazinator.Extensions.Pipelines.Features.Branching.PerItem;
 
+using System.Diagnostics;
 using Dazinator.Extensions.Pipelines.Features.Branching;
 using Dazinator.Extensions.Pipelines.Features.Filter;
 using Dazinator.Extensions.Pipelines.Features.Filter.Utils;
@@ -19,6 +20,8 @@ public class BranchPerItemFilter<T> : IStepFilter
 
     public Task BeforeStepAsync(PipelineStepContext context)
     {
+
+        Debug.WriteLine($"Setting up filter callback for type {typeof(T).Name} at step {context.StepId}");
 
         _lazyExecutionTask = new Lazy<Func<Action<ItemBranchBuilder<T>>, Task>>(() =>
         (configureBranch) =>
